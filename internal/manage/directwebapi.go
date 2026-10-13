@@ -36,7 +36,7 @@ type NewDirectTunnel struct {
 	// waits and holds the real service.
 	Side string `json:"side"`
 
-	// Carrier is how the packets travel: "pck", "udp" or "spoof".
+	// Carrier is one of the shared DirectCarriers choices.
 	Carrier string `json:"carrier"`
 
 	Name  string `json:"name"`
@@ -134,17 +134,9 @@ func DirectCarriers() []map[string]string {
 			"desc": "plain and simple — use it where the path does not interfere"},
 		{"value": "quic", "label": "Quic", "needsRoot": "",
 			"desc": "a real QUIC session on UDP — indistinguishable from HTTP/3, and needs no root"},
-		// cliOnly keeps a carrier out of the panel without taking it away.
-		//
-		// These two are the ones whose answers depend on the route rather than
-		// on the tunnel: which forged source a path will carry, which domain it
-		// already lets through. Getting them wrong produces a tunnel that comes
-		// up and moves nothing, and finding out costs a capture on the machine
-		// itself. That is CLI work, so the panel does not offer them — and the
-		// engine still runs a config that names one, whichever screen wrote it.
-		{"value": "spoof", "label": "IP Spoofing", "needsRoot": "1", "cliOnly": "1",
+		{"value": "spoof", "label": "IP Spoofing", "needsRoot": "1",
 			"desc": "raw packets with a forged source address — needs testing on your route"},
-		{"value": "sni", "label": "SNI Spoofing", "needsRoot": "1", "cliOnly": "1",
+		{"value": "sni", "label": "SNI Spoofing", "needsRoot": "1",
 			"desc": "PCK, plus a TLS hello naming a domain your route allows — the box in front reads that name and lets the rest through"},
 	}
 }
@@ -168,16 +160,9 @@ func offeredCarrier(name string) bool {
 	return false
 }
 
-// PanelDirectCarriers is DirectCarriers without the ones the panel does not
-// offer. The CLI reads the whole list; this is what /api/direct/options serves.
+// PanelDirectCarriers exposes the same choices and order as the CLI.
 func PanelDirectCarriers() []map[string]string {
-	out := make([]map[string]string, 0, len(DirectCarriers()))
-	for _, c := range DirectCarriers() {
-		if c["cliOnly"] == "" {
-			out = append(out, c)
-		}
-	}
-	return out
+	return DirectCarriers()
 }
 
 // DirectPresets is what the panel offers for tuning, in the same order as the
@@ -429,7 +414,7 @@ func (n NewDirectTunnel) spec() (l3Spec, error) {
 
 	spec := l3Spec{
 		Name: name, Side: side, Carrier: carrier,
-		// Always Backpack's own GRE inside the Noise session. There is no
+		// Always FullPack's own GRE inside the Noise session. There is no
 		// choice here and the panel does not offer one; see askL3Encap's
 		// removal in the CLI wizard for why.
 		Encap: "gre", GREKey: n.GREKey,

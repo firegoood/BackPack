@@ -82,6 +82,11 @@ export const tunnelSettings = name =>
   get('/api/tunnel/settings?name=' + encodeURIComponent(name));
 export const tunnelEdit  = payload => post('/api/tunnel/edit', payload);
 export const tunnelOptions = () => get('/api/tunnel/options');
+export const autoStatus = name => get('/api/tunnel/auto?name=' + encodeURIComponent(name));
+export const autoAction = (name, operation, candidate = '') =>
+  post('/api/tunnel/auto?name=' + encodeURIComponent(name), { operation, candidate });
+export const peerEnrollment = (name, transport, link) =>
+  post('/api/tunnel/peer-enrollment', { name, transport, link });
 
 /* ---- Handing a tunnel's paired settings to the other server --------------- */
 /* One string carrying everything the two ends must agree on. The mirroring —
@@ -109,7 +114,7 @@ export const fleetDrift = () => get('/api/fleet/drift');
 export const nodesCached = () => get('/api/nodes?cached=1');
 const nodePost = form => post('/api/nodes', new URLSearchParams(form));
 export const nodeRemove = name => nodePost({ action: 'remove', name });
-/* Adding reaches the server while the operator waits, and installs Backpack on
+/* Adding reaches the server while the operator waits, and installs FullPack on
    it if it has none, so this is the one node call that can take minutes. */
 export const nodeAdd = fields => nodePost({ action: 'add', ...fields });
 export const nodeCredentials = fields => nodePost({ action: 'credentials', ...fields });

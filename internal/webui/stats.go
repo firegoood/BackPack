@@ -163,6 +163,13 @@ func splitBotRelay(ports []string, token string) (string, int, bool) {
 func gatherTunnels(run node.Runner) []TunnelInfo {
 	tunnels := manage.List()
 	out := make([]TunnelInfo, len(tunnels))
+	// Health keeps using the private reverse engine. Cards, peer sockets and
+	// latency probes describe the public HTTPS helper instead of loopback.
+	for i, t := range tunnels {
+		if cfg, err := manage.LoadTunnelConfig(t.Name); err == nil {
+			tunnels[i] = publicPanelTunnel(t, cfg)
+		}
+	}
 
 	// One shared answer for "is it up", from the same code the watchdog and the
 	// health check use. Working it out here separately is what made KCP tunnels
@@ -202,6 +209,23 @@ func gatherTunnels(run node.Runner) []TunnelInfo {
 	}
 	wg.Wait()
 	return out
+}
+
+func publicPanelTunnel(t manage.Tunnel, cfg config.Config) manage.Tunnel {
+	if t.Role == "server" {
+		if cfg.Server.Naive.Enabled() {
+			t.Transport, t.Addr = "naive", cfg.Server.Naive.Listen
+		} else if cfg.Server.Xray.Enabled() {
+			t.Transport, t.Addr = cfg.Server.Xray.Mode, cfg.Server.Xray.Listen
+		}
+	} else if t.Role == "client" {
+		if cfg.Client.Naive.Enabled() {
+			t.Transport, t.Addr = "naive", cfg.Client.Naive.Server
+		} else if cfg.Client.Xray.Enabled() {
+			t.Transport, t.Addr = cfg.Client.Xray.Mode, cfg.Client.Xray.Server
+		}
+	}
+	return t
 }
 
 // tunnelInfo is one tunnel's card: what its config says, what its snapshot
@@ -276,7 +300,8 @@ func observeInbound(info *TunnelInfo, t manage.Tunnel, th manage.Health, peersBy
 	// it to the metrics file, so fall back to that rather than
 	// showing a working tunnel with no ping and no location.
 	if len(peers) == 0 && snapErr == nil {
-		if ip := peerHost(snap.Peer); ip != "" {
+		managed := t.Transport == "naive" || t.Transport == "xhttp" || t.Transport == "reality"
+		if ip := peerHost(snap.Peer); ip != "" && !(managed && net.ParseIP(ip).IsLoopback()) {
 			peers = []peerConn{{IP: ip, RTT: -1}}
 		}
 	}

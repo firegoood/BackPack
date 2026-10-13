@@ -9,7 +9,7 @@
  * machine is administered. So adding a server is a form and an answer, the way
  * everything else in the panel is, and there is nothing to carry anywhere.
  *
- * CLI: nothing. There is no Backpack state on a managed server to configure.
+ * CLI: nothing. There is no FullPack state on a managed server to configure.
  */
 
 import { $, el, esc } from '../lib/dom.js';
@@ -319,7 +319,7 @@ export function serversView(ctx) {
     const behind = n.online && i.version && mine && i.version !== mine;
 
     /* One line of identity under the name: the address, where it is, which
-       Backpack it runs, how long it has been up. They were four separate
+       FullPack it runs, how long it has been up. They were four separate
        blocks — an oversized address, a two-cell facts grid, a decorative map
        behind all of it — on a card tall enough that a fleet of four did not
        fit on a screen. They are facts of one or two words each; a row of them
@@ -774,9 +774,9 @@ export function serversView(ctx) {
     goB.disabled = true;
     goB.textContent = 'Reaching it…';
     /* Adding can take minutes rather than seconds, because a server with no
-       Backpack on it gets one. Said plainly while it happens: a button that sits
+       FullPack on it gets one. Said plainly while it happens: a button that sits
        there for two minutes with no explanation is one people press again. */
-    note.textContent = 'Logging in, and installing Backpack if that server has none. '
+    note.textContent = 'Logging in, and installing FullPack if that server has none. '
                      + 'This can take a couple of minutes.';
     try {
       const state = await api.nodeAdd(fields);

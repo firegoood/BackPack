@@ -5,9 +5,11 @@ import (
 	"time"
 
 	"github.com/backpack/backpack/internal/app"
+	"github.com/backpack/backpack/internal/enginectl"
 	"github.com/backpack/backpack/internal/manage/core"
 	"github.com/backpack/backpack/internal/manage/tunnelspec"
 	"github.com/backpack/backpack/internal/metrics"
+	"github.com/backpack/backpack/internal/tunnel/peerauto"
 )
 
 // Health describes how a single tunnel is doing right now.
@@ -85,6 +87,24 @@ func tunnelHealthWith(t core.Tunnel, pairs [][2]string) Health {
 	case !h.Active:
 		h.State, h.Detail = "stopped", "service is not running"
 	default:
+		if coordinatorOwnsRecovery(t) {
+			var status peerauto.Status
+			if err := enginectl.Ask(t.Name, enginectl.OpAutoStatus, &status); err != nil {
+				h.State, h.Detail = "unknown", "Auto coordinator status unavailable: "+err.Error()
+				return h
+			}
+			h.Connected = status.Active != ""
+			h.State = "offline"
+			if h.Connected {
+				h.State = "online"
+			}
+			h.Detail = "Auto " + status.State + ": " + status.Reason
+			if d := serviceDown(app.ConfigDir, t.Name); d != nil && h.Connected {
+				h.ServiceDown = d
+				h.Detail += "; " + serviceDownDetail(d)
+			}
+			return h
+		}
 		h.Connected = tunnelHealthy(t, pairs)
 		// tunnelHealthy answers the watchdog's question — "is this worth
 		// restarting?" — and for a datagram server it deliberately says yes

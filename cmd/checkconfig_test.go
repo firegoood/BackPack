@@ -10,7 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// `backpack check` asks CheckConfigFile, so it has to give the answer Run
+// `fullpack check` asks CheckConfigFile, so it has to give the answer Run
 // would: accept what starts, and refuse what the engine refuses, for the
 // engine's reason.
 func TestCheckConfigFileGivesTheEnginesAnswer(t *testing.T) {

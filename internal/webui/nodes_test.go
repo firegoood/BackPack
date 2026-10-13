@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/backpack/backpack/config"
+	"github.com/backpack/backpack/internal/app"
 	"github.com/backpack/backpack/internal/manage"
 	"github.com/backpack/backpack/internal/node"
 )
@@ -360,7 +362,7 @@ func TestTheFarSideNeedsNothingButTheOneCommand(t *testing.T) {
 	}
 	src := string(cli)
 	if !strings.Contains(src, `case "exec":`) {
-		t.Fatal("`backpack node exec` is gone, and it is the only thing the panel runs " +
+		t.Fatal("`fullpack node exec` is gone, and it is the only thing the panel runs " +
 			"on a managed server")
 	}
 	for _, gone := range []string{`case "setup":`, `case "run":`, `case "remove":`} {
@@ -376,10 +378,10 @@ func TestTheFarSideNeedsNothingButTheOneCommand(t *testing.T) {
 		t.Fatalf("reading install.sh: %v", err)
 	}
 	if strings.Contains(string(sh), "node setup") {
-		t.Error("install.sh still ends in `backpack node setup`, which no longer exists")
+		t.Error("install.sh still ends in `fullpack node setup`, which no longer exists")
 	}
 	// And it must still install without a terminal, because that is how the
-	// panel runs it on a server that has no Backpack yet.
+	// panel runs it on a server that has no FullPack yet.
 	if !strings.Contains(string(sh), "if [ -t 0 ]") {
 		t.Error("install.sh no longer checks for a terminal, so a remote install would " +
 			"open a menu nobody can answer")
@@ -438,8 +440,82 @@ func TestTheCarryForwardNeverBlocksAnEdit(t *testing.T) {
 	isolateFleet(t)
 	s := newFleetServer()
 
-	if got := peerConnOnNode(s.nodes.Runner(), "kharej-de", "fr-relay-kharej"); got != nil {
+	if got := peerSettingsOnNode(s.nodes.Runner(), "kharej-de", "fr-relay-kharej"); got != nil {
 		t.Errorf("an unreachable node produced settings out of nowhere: %+v", got)
+	}
+}
+
+type capturingPeerRunner struct {
+	*fakeRunner
+	apply node.ApplyRequest
+}
+
+func (f *capturingPeerRunner) Call(name, op string, body, out any) error {
+	if op == node.OpApply {
+		raw, err := json.Marshal(body)
+		if err != nil {
+			return err
+		}
+		if err := json.Unmarshal(raw, &f.apply); err != nil {
+			return err
+		}
+	}
+	return f.fakeRunner.Call(name, op, body, out)
+}
+
+func TestManagedPeerRebuildKeepsLocalHelperAndUsesNaiveCertificateAddress(t *testing.T) {
+	dir := t.TempDir()
+	cert, key := writePair(t, dir, "tunnel.example", time.Now().Add(time.Hour))
+	name := "panel-naive-peer-audit"
+	path := app.ConfigPath(name)
+	if err := os.MkdirAll(app.ConfigDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatal("test fixture name is already in use")
+	}
+	spec := manage.TunnelSpec{Name: name, Role: "server", Transport: "tcp", BindAddr: "127.0.0.1:3080",
+		Token: "peer-audit-token", Ports: []string{"2087"}, NaiveServer: config.NaiveServerConfig{
+			Binary: "/server/sing-box", Listen: "0.0.0.0:19443", Username: "peer-user", Password: "new-password", Certificate: cert, Key: key}}
+	if err := os.WriteFile(path, []byte(spec.Render()), 0600); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Remove(path) })
+	run := &capturingPeerRunner{fakeRunner: newFake()}
+	run.up["kharej"] = true
+	run.answers[node.OpSettings] = manage.TunnelSettings{Role: "client", Transport: "naive",
+		Managed: &manage.ManagedHTTPS{Binary: "/custom/naive", InternalPort: "3180"},
+		Conn:    manage.ConnTune{Proxy: "socks5://old-proxy:1080", SimpleAuth: true}}
+	r := httptest.NewRequest("POST", "https://panel.example/api/nodes/pair", nil)
+	if _, err := (&server{}).pushPeerEnd(run, "kharej", name, nil, r); err != nil {
+		t.Fatal(err)
+	}
+	peer := run.apply.Tunnel
+	if peer == nil || peer.Managed == nil {
+		t.Fatal("node apply request lost managed HTTPS settings")
+	}
+	if peer.ServerAddr != "tunnel.example" || peer.TunnelPort != "19443" {
+		t.Fatalf("Naive peer would dial the panel address instead of its certificate address: %+v", peer)
+	}
+	m := peer.Managed
+	if m.Binary != "/custom/naive" || m.InternalPort != "3180" || m.Password != "new-password" || m.CAPEM == "" || peer.Conn != nil {
+		t.Fatal("peer rebuild dropped local helper settings, lost new credentials/trust, or carried incompatible routing")
+	}
+}
+
+func TestManagedPeerHelperOnlyCarriesAcrossCompatibleProtocols(t *testing.T) {
+	current := &manage.TunnelSettings{Role: "client", Transport: "xhttp",
+		Managed: &manage.ManagedHTTPS{Binary: "/custom/xray", InternalPort: "3180", UUID: "old-id"}}
+	for _, transport := range []string{"xhttp", "reality", "naive"} {
+		peer := manage.NewTunnel{Transport: transport, Managed: &manage.ManagedHTTPS{InternalPort: "3080", UUID: "new-id"}}
+		carryPeerManaged(&peer, current)
+		if transport == "naive" {
+			if peer.Managed.Binary != "" || peer.Managed.InternalPort != "3080" {
+				t.Fatal("Naive inherited an incompatible Xray executable")
+			}
+		} else if peer.Managed.Binary != "/custom/xray" || peer.Managed.InternalPort != "3180" || peer.Managed.UUID != "new-id" {
+			t.Fatal("Xray rebuild failed to preserve local settings and replace peer identity")
+		}
 	}
 }
 
@@ -467,7 +543,7 @@ func (r *installingRunner) Call(name, op string, body, out any) error {
 	if !r.up[name] {
 		return node.ErrOffline{
 			Name: name,
-			Why:  "the Backpack on that server is too old to be managed from this panel",
+			Why:  "the FullPack on that server is too old to be managed from this panel",
 			Err:  node.ErrNeedsInstall,
 		}
 	}
@@ -478,12 +554,12 @@ func (r *installingRunner) Call(name, op string, body, out any) error {
 	return nil
 }
 
-// A server already running an older Backpack is upgraded, not refused.
+// A server already running an older FullPack is upgraded, not refused.
 //
 // This is the bug report: the panel reached a server in the operator's fleet,
-// found a Backpack that did not understand `node exec`, and treated it as a
+// found a FullPack that did not understand `node exec`, and treated it as a
 // server that could not be reached — refusing the add and printing the far
-// machine's own help, which told them to run `backpack node setup`, a command
+// machine's own help, which told them to run `fullpack node setup`, a command
 // this release removed. Every server in an existing fleet is in that state the
 // day the panel is upgraded, so this is the ordinary path, not an edge.
 func TestAServerRunningAnOlderBackpackIsUpgradedNotRefused(t *testing.T) {
@@ -497,7 +573,7 @@ func TestAServerRunningAnOlderBackpackIsUpgradedNotRefused(t *testing.T) {
 
 	w := post(t, s, "action=add&name=germany&host=91.107.245.145&user=root&password=x")
 	if w.Code != http.StatusOK {
-		t.Fatalf("a server running an older Backpack was refused: %d %s", w.Code, w.Body.String())
+		t.Fatalf("a server running an older FullPack was refused: %d %s", w.Code, w.Body.String())
 	}
 	if r.installed != 1 {
 		t.Errorf("the panel installed %d times, want once — an out-of-date server "+

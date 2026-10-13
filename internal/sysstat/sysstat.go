@@ -126,7 +126,7 @@ func readUptime(path string) (time.Duration, bool) {
 // and costs nothing, which is why Get uses it.
 //
 // In a process that exists to answer one question and exit it means nothing at
-// all. `backpack node exec` is exactly that, and it is how a panel reads a
+// all. `fullpack node exec` is exactly that, and it is how a panel reads a
 // managed server: there is no previous call, so the only delta available is the
 // one since the package initialised microseconds earlier. Over a window that
 // short /proc/stat has usually not ticked, and gopsutil's own arithmetic then

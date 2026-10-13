@@ -1,18 +1,18 @@
 <div dir="rtl">
 
-<p align="center"><img src="img/cover.png" alt="Backpack" width="100%"></p>
+<p align="center"><img src="img/fullpack.svg" alt="FullPack" width="100%"></p>
 
-# بک‌پک 🎒
+# FullPack 🎒
 
 <p align="center">
-  <a href="go.mod"><img alt="Go version" src="https://img.shields.io/github/go-mod/go-version/AminMGMT/BackPack?logo=go&label=Go"></a>
-  <a href="https://github.com/AminMGMT/BackPack/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/AminMGMT/BackPack?logo=github&label=release&color=blue"></a>
-  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/AminMGMT/BackPack?color=green"></a>
-  <a href="https://github.com/AminMGMT/BackPack/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/AminMGMT/BackPack?style=flat&logo=github&color=yellow"></a>
-  <a href="https://github.com/AminMGMT/BackPack/releases"><img alt="Total downloads across all releases" src="https://img.shields.io/github/downloads/AminMGMT/BackPack/total?logo=github&label=total%20downloads&color=orange"></a>
+  <a href="go.mod"><img alt="Go version" src="https://img.shields.io/github/go-mod/go-version/firegoood/BackPack?logo=go&label=Go"></a>
+  <a href="https://github.com/firegoood/BackPack/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/firegoood/BackPack?logo=github&label=release&color=blue"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/firegoood/BackPack?color=green"></a>
+  <a href="https://github.com/firegoood/BackPack/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/firegoood/BackPack?style=flat&logo=github&color=yellow"></a>
+  <a href="https://github.com/firegoood/BackPack/releases"><img alt="Total downloads across all releases" src="https://img.shields.io/github/downloads/firegoood/BackPack/total?logo=github&label=total%20downloads&color=orange"></a>
 </p>
 
-**بک‌پک** یک هستهٔ تونل با کارایی بالاست که کاملاً با **Go** نوشته شده و برای
+**FullPack** یک هستهٔ تونل با کارایی بالاست که کاملاً با **Go** نوشته شده و برای
 ست‌آپ سرور ایران ⇄ خارج طراحی شده. یک باینری واحد است با یک منوی تعاملی CLI
 **و** یک پنل وب امن — یعنی همه‌چیز را با ترمینال یا بدون ترمینال می‌توانی
 مدیریت کنی.
@@ -37,7 +37,7 @@
 
 ## چطور کار می‌کند
 
-<p align="center"><img src="img/architecture.svg" alt="معماری بک‌پک: کاربر به پورت forward‌شده روی سرور ایران وصل می‌شود، انجین آن را از یک ترنسپورت به کلاینت خارج می‌برد و کلاینت به سرویس واقعی می‌رساند. کلاینت به سرور dial می‌کند." width="100%"></p>
+<p align="center"><img src="img/architecture.svg" alt="معماری FullPack: کاربر به پورت forward‌شده روی سرور ایران وصل می‌شود، انجین آن را از یک ترنسپورت به کلاینت خارج می‌برد و کلاینت به سرویس واقعی می‌رساند. کلاینت به سرور dial می‌کند." width="100%"></p>
 
 </div>
 
@@ -65,7 +65,7 @@
 | **[معکوس](#تونل-معکوس--۱۲-ترنسپورت)** | خارج → ایران | پورت‌های forward‌شده | حالت معمول: ایران می‌تواند اتصال ورودی بپذیرد |
 | **[مستقیم](#تونل-مستقیم--۶-حامل)** | ایران → خارج | یک شبکهٔ خصوصی، با پورت‌های forward‌شده رویش | وقتی اتصال ورودی به ایران رد نمی‌شود |
 
-هر دو یک‌جور ساخته می‌شوند — `sudo backpack` را اجرا کن، برای ماشینی که رویش
+هر دو یک‌جور ساخته می‌شوند — `sudo fullpack` را اجرا کن، برای ماشینی که رویش
 هستی **Setup Iran** یا **Setup Kharej** را بردار، و بقیه را ویزارد می‌پرسد.
 
 ---
@@ -120,15 +120,15 @@ replay، و **MTU خودش را اندازه می‌گیرد**. تنها چیز�
 | **xdi** | ICMP echo، برای مسیری که UDP و TCP را می‌بندد ولی پینگ را نه. | لینوکس، root، ICMP باز | [→](docs/l3-direct-tunnel.md) |
 | **spoof** | IP خام با **آدرس مبدأ جعلی**، برای مسیری که بر اساس مبدأ محدود یا مسدود می‌کند. | لینوکس، root، مسیری که مبدأ جعلی را رد کند | [→](docs/ip-spoofing.md) |
 
-هر شش‌تا یک‌جور ساخته می‌شوند — `sudo backpack` → **Setup Iran** یا
+هر شش‌تا یک‌جور ساخته می‌شوند — `sudo fullpack` → **Setup Iran** یا
 **Setup Kharej** → **Direct** → حامل را انتخاب کن — و یک صفحه همه‌شان را پوشش
 می‌دهد.
 
 **اول سرور ایران را بساز.** بعد از ساخت تونل، ایران یک **لینک `backpack://`** چاپ
-می‌کند، و زیرش یک **دستور یک‌خطی** که روی خارجی که هنوز بک‌پک ندارد (با کاربر root) بک‌پک را نصب
-می‌کند و تونل را از همان لینک می‌سازد و بالا می‌آورد — بدون هیچ سؤالی. اگر خارج بک‌پک را دارد،
+می‌کند، و زیرش یک **دستور یک‌خطی** که روی خارجی که هنوز FullPack ندارد (با کاربر root) FullPack را نصب
+می‌کند و تونل را از همان لینک می‌سازد و بالا می‌آورد — بدون هیچ سؤالی. اگر خارج FullPack را دارد،
 **Setup Kharej ← Direct ← همان حامل ← Setup Link** را بزن و لینک را پیست کن (یا
-`backpack link apply '<link>'`) — توکن، آدرس‌ها و تنظیمات خودکار می‌آیند. برای چند خارج پشت یک ایران، برای هر خارج یک بار از ایران تونل بساز؛ هر
+`fullpack link apply '<link>'`) — توکن، آدرس‌ها و تنظیمات خودکار می‌آیند. برای چند خارج پشت یک ایران، برای هر خارج یک بار از ایران تونل بساز؛ هر
 کدام لینک خودش را دارد.
 
 **[← تونل مستقیم به‌طور کامل](docs/l3-direct-tunnel.md)** ·
@@ -146,12 +146,12 @@ replay، و **MTU خودش را اندازه می‌گیرد**. تنها چیز�
 </div>
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/AminMGMT/BackPack/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/firegoood/BackPack/main/install.sh)
 ```
 
 <div dir="rtl">
 
-دفعات بعد هر وقت خواستی با `sudo backpack` بازش کن.
+دفعات بعد هر وقت خواستی با `sudo fullpack` بازش کن.
 
 > **سرور به اینترنت دسترسی ندارد؟** یک مسیر نصب آفلاین کامل وجود دارد — فقط یک
 > آرشیو را کپی کن. build از سورس هم به‌عنوان راه دوم کار می‌کند.
@@ -175,12 +175,12 @@ bash <(curl -fsSL https://raw.githubusercontent.com/AminMGMT/BackPack/main/insta
 
 ```bash
 # روی سرور ایران
-sudo backpack   →  1. Setup Iran
+sudo fullpack   →  1. Setup Iran
 #   Reverse → ترنسپورت → آی‌پی/دامنهٔ ایران → پورت تونل → پورت‌های forward
 #   → نام → توکن (Enter) → سؤال UDP → پریست (Turbo) → Setup Link را کپی کن
 
 # روی سرور خارج
-sudo backpack   →  2. Setup Kharej
+sudo fullpack   →  2. Setup Kharej
 #   Reverse → همان ترنسپورت → Setup Link → لینک را پیست کن → نام → تمام
 #   (یا Manual: آی‌پی ایران + همان پورت تونل → نام → همان توکن → همان پریست)
 ```
@@ -198,7 +198,7 @@ sudo backpack   →  2. Setup Kharej
 
 ---
 
-## چرا بک‌پک؟
+## چرا FullPack؟
 
 - **UDP روی هر پورت forward شده** — Xray/3x-ui، شدوساکس، وایرگارد، DNS و بازی،
   روی **همهٔ** ترنسپورت‌ها، فقط با یک گزینه.
@@ -307,7 +307,7 @@ TLS و زمان‌بندی؛ آپدیت تأییدشده روی کانال stabl
 
 ## حمایت و دونیت
 
-اگر بک‌پک برات مفید بود، یه ستاره یا یه دونیت کوچیک خیلی ارزشمنده. 🙏
+اگر FullPack برات مفید بود، یه ستاره یا یه دونیت کوچیک خیلی ارزشمنده. 🙏
 
 - کانال تلگرام: **[@BlackProtocols](https://t.me/BlackProtocols)**
 

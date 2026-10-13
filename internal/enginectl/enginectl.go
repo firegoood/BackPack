@@ -19,7 +19,7 @@
 // # Why a unix socket and not a port
 //
 // It is reachable only by something already on the machine and running as root.
-// The socket is 0600 under /run/backpack, which is 0700, so the attack surface
+// The socket is 0600 under /run/fullpack, which is 0700, so the attack surface
 // added is exactly the attack surface of already being root — which is to say
 // none. A TCP port, however tightly bound, is one firewall mistake away from
 // being reachable, and this is a channel that restarts tunnels.
@@ -34,7 +34,7 @@
 //
 // # Why the unit does not declare a RuntimeDirectory
 //
-// `RuntimeDirectory=backpack` is the systemd idiom and would have systemd make
+// `RuntimeDirectory=fullpack` is the systemd idiom and would have systemd make
 // the directory with the right mode and remove it on stop. It is not used, and
 // the reason is not style: the tunnel units are compared against one template
 // and rewritten when they differ, so adding a line to that template restarts
@@ -59,6 +59,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 )
 
@@ -74,10 +75,12 @@ const (
 	// OpRestartTransport tears the current transport down and starts it again
 	// inside the same process. The rung below `systemctl restart`.
 	OpRestartTransport = "restart-transport"
+	OpAutoStatus       = "auto-status"
+	OpAutoAction       = "auto-action"
 )
 
 // Dir is where the sockets live. One per tunnel, named after it.
-var Dir = "/run/backpack"
+var Dir = "/run/fullpack"
 
 // SocketPath is the socket for one tunnel.
 func SocketPath(name string) string { return filepath.Join(Dir, name+".sock") }
@@ -109,7 +112,8 @@ type Status struct {
 	// Generation counts how many times the transport has been started in this
 	// process, so a caller can tell a restart that happened from one that was
 	// asked for and did not.
-	Generation int `json:"generation"`
+	Generation  int             `json:"generation"`
+	Diagnostics json.RawMessage `json:"diagnostics,omitempty"`
 }
 
 // Handler is what the engine supplies: the two questions it can answer and the
@@ -126,6 +130,12 @@ type Handler interface {
 	// "accepted" and "working" are different answers and a socket that blocks
 	// until the second one is a socket that hangs on the failure it exists for.
 	RestartTransport() error
+}
+
+// Optional extension: legacy engines keep the original closed operation set.
+type AutoHandler interface {
+	AutoStatus() (any, error)
+	AutoAction(context.Context, json.RawMessage) error
 }
 
 // ErrNotRunning is what Dial reports when no engine is listening for this
@@ -148,9 +158,14 @@ func Serve(ctx context.Context, name string, h Handler) error {
 	// protects it; this is the second lock on the same door, and it is cheap.
 	_ = os.Chmod(Dir, 0o700)
 	path := SocketPath(name)
+	release, e := claimSocket(path)
+	if e != nil {
+		return e
+	}
+	defer release()
 	// A socket left by a process that did not exit cleanly would refuse the
-	// bind. Removing it is safe because only one engine per tunnel exists —
-	// that is the systemd unit's guarantee, not this package's assumption.
+	// bind. The exclusive socket claim is held until listener cleanup finishes,
+	// so a duplicate process cannot unlink a live engine's control endpoint.
 	_ = os.Remove(path)
 
 	ln, err := net.Listen("unix", path)
@@ -162,11 +177,13 @@ func Serve(ctx context.Context, name string, h Handler) error {
 		return fmt.Errorf("enginectl: %w", err)
 	}
 
-	go func() {
-		<-ctx.Done()
-		ln.Close()
-		_ = os.Remove(path)
-	}()
+	stop := context.AfterFunc(ctx, func() { ln.Close() })
+	defer stop()
+	defer func() { ln.Close(); _ = os.Remove(path) }()
+	serveCtx, cancel := context.WithCancel(ctx)
+	var workers sync.WaitGroup
+	defer func() { cancel(); workers.Wait() }()
+	permits := make(chan struct{}, 32)
 
 	for {
 		conn, err := ln.Accept()
@@ -176,7 +193,20 @@ func Serve(ctx context.Context, name string, h Handler) error {
 			}
 			return err
 		}
-		go serveConn(conn, h)
+		select {
+		case permits <- struct{}{}:
+		default:
+			conn.Close()
+			continue
+		}
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			defer func() { <-permits }()
+			stopConn := context.AfterFunc(serveCtx, func() { conn.Close() })
+			defer stopConn()
+			serveConn(serveCtx, conn, h)
+		}()
 	}
 }
 
@@ -185,7 +215,7 @@ func Serve(ctx context.Context, name string, h Handler) error {
 // The deadline is per request rather than per connection: a caller that holds
 // the socket open between questions is doing the right thing, and one that
 // opens it and says nothing must not hold a goroutine for ever.
-func serveConn(conn net.Conn, h Handler) {
+func serveConn(ctx context.Context, conn net.Conn, h Handler) {
 	defer conn.Close()
 	dec := json.NewDecoder(bufio.NewReader(conn))
 	enc := json.NewEncoder(conn)
@@ -196,14 +226,15 @@ func serveConn(conn net.Conn, h Handler) {
 		if err := dec.Decode(&req); err != nil {
 			return
 		}
+		res := answerContext(ctx, req, h)
 		_ = conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-		if err := enc.Encode(answer(req, h)); err != nil {
+		if err := enc.Encode(res); err != nil {
 			return
 		}
 	}
 }
 
-func answer(req Request, h Handler) Response {
+func answerContext(parent context.Context, req Request, h Handler) Response {
 	switch req.Op {
 	case OpPing:
 		return Response{OK: true}
@@ -220,6 +251,30 @@ func answer(req Request, h Handler) Response {
 			return Response{Err: err.Error()}
 		}
 		return Response{OK: true}
+	case OpAutoStatus:
+		if a, ok := h.(AutoHandler); ok {
+			s, e := a.AutoStatus()
+			if e != nil {
+				return Response{Err: e.Error()}
+			}
+			b, e := json.Marshal(s)
+			if e != nil {
+				return Response{Err: e.Error()}
+			}
+			return Response{OK: true, Body: b}
+		}
+	case OpAutoAction:
+		if a, ok := h.(AutoHandler); ok {
+			if len(req.Body) > 1024 {
+				return Response{Err: "Auto action exceeds size limit"}
+			}
+			ctx, cancel := context.WithTimeout(parent, 90*time.Second)
+			defer cancel()
+			if e := a.AutoAction(ctx, req.Body); e != nil {
+				return Response{Err: e.Error()}
+			}
+			return Response{OK: true}
+		}
 	}
 	// The closed list is the point. An unknown op is refused by name so that a
 	// caller from a newer build learns that this engine is older, rather than
@@ -243,8 +298,19 @@ func (c *Client) Close() error { return c.conn.Close() }
 
 // Call sends one request and decodes the answer into out, which may be nil.
 func (c *Client) Call(op string, out any) error {
-	_ = c.conn.SetDeadline(time.Now().Add(10 * time.Second))
-	if err := json.NewEncoder(c.conn).Encode(Request{Op: op}); err != nil {
+	return c.CallBody(op, nil, out)
+}
+func (c *Client) CallBody(op string, body any, out any) error {
+	timeout := 10 * time.Second
+	if op == OpAutoAction {
+		timeout = 100 * time.Second
+	}
+	_ = c.conn.SetDeadline(time.Now().Add(timeout))
+	b, e := json.Marshal(body)
+	if e != nil {
+		return e
+	}
+	if err := json.NewEncoder(c.conn).Encode(Request{Op: op, Body: b}); err != nil {
 		return err
 	}
 	var res Response
@@ -258,6 +324,15 @@ func (c *Client) Call(op string, out any) error {
 		return json.Unmarshal(res.Body, out)
 	}
 	return nil
+}
+
+func AskBody(name, op string, body, out any) error {
+	c, e := Dial(name)
+	if e != nil {
+		return e
+	}
+	defer c.Close()
+	return c.CallBody(op, body, out)
 }
 
 // Ask is the one-shot form: dial, ask, close. It is what a watchdog wants,

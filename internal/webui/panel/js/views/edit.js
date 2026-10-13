@@ -9,6 +9,9 @@
 
 import { $$, el, esc } from '../lib/dom.js';
 import { NUMERIC } from '../lib/numeric.js';
+import { isManaged, shapeManaged, managedSettingsChanged } from '../ui/managed.js';
+import { peerEditForm } from '../ui/peerauto.js';
+import { presetsForTransport } from '../ui/presets.js';
 import { kindLabel, flag } from '../lib/format.js';
 import * as api from '../api.js';
 import * as store from '../store.js';
@@ -155,6 +158,12 @@ function shapeForTransport(root, settings, tunnel) {
   const t = String(settings.transport || tunnel?.transport || '').toLowerCase();
   const direct = !!tunnel && tunnel.direction === 'direct';
   const server = (settings.role || tunnel?.role || '') === 'server';
+  const description = root.querySelector('[data-transport-desc]');
+  if (description) {
+    const entry = (wireControls.opts?.families || []).flatMap(f => f.entries || [])
+      .find(e => e.value === t);
+    description.textContent = entry?.desc || '';
+  }
 
   /* Marked as well as hidden. read() has to skip these — a field that does not
      apply is one the server has no key for, and sending it fails the whole save
@@ -173,8 +182,8 @@ function shapeForTransport(root, settings, tunnel) {
   // The server refuses an MSS on a datagram transport by name.
   show(byName('tune.mss'), !isDatagram(t));
   // Off by default and plain TCP only; anywhere else it is written and ignored.
-  show(byName('tune.zeroCopy'), t === 'tcp');
-  show(byName('proxyProtocol'), server && takesProxyProtocol(t));
+  show(byName('tune.zeroCopy'), t === 'tcp' || isManaged(t));
+  show(byName('proxyProtocol'), server && (takesProxyProtocol(t) || isManaged(t)));
   /* Only a TLS server presents a certificate. Elsewhere the two fields would be
      settings the transport has no use for. */
   show('.certrow', server && needsTLS(t));
@@ -182,10 +191,17 @@ function shapeForTransport(root, settings, tunnel) {
   // Which half of the tunnel this is decides the rest.
   show(byName('serverAddr'), !server);
   show(byName('ports'), server);
-  show(byName('tune.acceptUDP'), server);
+  show(byName('tune.acceptUDP'), server && !isManaged(t));
   show(byName('tune.channelSize'), server);
   show(byName('tune.connectionPool'), !server);
   show(byName('tune.aggressivePool'), !server);
+  root.querySelectorAll('[name^="conn."], [data-name^="conn."]').forEach(n => {
+    const off = isManaged(t);
+    const row = n.closest('.f, .tg, .two > div, .row') || n;
+    row.hidden = off;
+    if (off) n.setAttribute('data-off', '1'); else n.removeAttribute('data-off');
+  });
+  shapeManaged(root, t, server ? 'server' : 'client', direct);
 
   // The forged-source settings belong to the spoof carrier, which is a direct
   // tunnel's choice — never a reverse transport's.
@@ -205,7 +221,7 @@ function shapeForTransport(root, settings, tunnel) {
 
 /* The choices each menu offers. Transport and preset come from the server, so
    the form can never offer one the engine does not have. */
-async function choicesFor(name, opts, family) {
+async function choicesFor(name, opts, family, transport) {
   switch (name) {
     case '__family':
       return (opts.families || []).map((f, i) => ({ value: String(i), label: f.label }));
@@ -214,7 +230,7 @@ async function choicesFor(name, opts, family) {
       return (fam?.entries || []).map(e => ({ value: e.value, label: e.label }));
     }
     case 'preset':
-      return (opts.presets || []).map(p => ({ value: p.value, label: p.label }));
+      return presetsForTransport(opts.presets, transport).map(p => ({ value: p.value, label: p.label }));
     case 'tune.logLevel':
       return ['debug', 'info', 'warn', 'error'].map(v => ({ value: v, label: v }));
     default:
@@ -222,8 +238,7 @@ async function choicesFor(name, opts, family) {
   }
 }
 
-/* Points the family menu at whichever family offers `transport`, and refreshes
-   the transport menu underneath it so its list matches. */
+/* Select the current family before painting its transport menu. */
 function selectFamilyFor(root, opts, transport) {
   const sel = root.querySelector('.sel[data-name="__family"]');
   if (!sel || !transport) return;
@@ -234,12 +249,13 @@ function selectFamilyFor(root, opts, transport) {
   if (sel.childNodes[0]) sel.childNodes[0].textContent = fams[i].label;
 }
 
-async function wireControls(root, given) {
+async function wireControls(root, given, transport = '') {
   let opts = given || { families: [], presets: [] };
   if (!given) {
     try { opts = await api.tunnelOptions(); } catch (e) { /* the menus stay empty */ }
   }
   wireControls.opts = opts;
+  selectFamilyFor(root, opts, transport);
 
   root.querySelectorAll('.sww[data-name]').forEach(sw => {
     const name = sw.dataset.name;
@@ -262,6 +278,7 @@ async function wireControls(root, given) {
   });
 
   const famOf = () => root.querySelector('.sel[data-name="__family"]')?.dataset.value || '0';
+  const trOf = () => root.querySelector('input[name="transport"]')?.value || transport;
 
   for (const sel of root.querySelectorAll('.sel[data-name]')) {
     const name = sel.dataset.name;
@@ -280,15 +297,19 @@ async function wireControls(root, given) {
     sel.append(menu);
 
     const paint = async () => {
-      const list = await choicesFor(name, opts, famOf());
+      const list = await choicesFor(name, opts, famOf(), trOf());
       menu.innerHTML = '';
       list.forEach(c => {
         const b = el('button', { type: 'button', class: 'selopt', text: c.label });
+        b.dataset.value = c.value;
         b.addEventListener('click', ev => {
           ev.stopPropagation();
           sel.dataset.value = c.value;
           sel.childNodes[0].textContent = c.label;
-          if (input) input.value = c.value;
+          if (input) {
+            input.value = c.value;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+          }
           menu.hidden = true;
           sel.classList.remove('open');
           // Changing the family changes what transports there are.
@@ -330,6 +351,25 @@ async function wireControls(root, given) {
     });
   }
 
+  root.addEventListener('change', ev => {
+    if (ev.target.name !== 'transport') return;
+    const sel = root.querySelector('.sel[data-name="preset"]');
+    const input = root.querySelector('input[name="preset"]');
+    const allowed = presetsForTransport(opts.presets, trOf());
+    const current = (opts.presets || []).find(p => p.value === input?.value);
+    // Keep custom/unknown stored profiles, but retire an explicitly marked
+    // incompatible choice when its transport changes.
+    if (input && current?.kcpOnly && !allowed.some(p => p.value === current.value)) {
+      const next = allowed[0];
+      input.value = next?.value || '';
+      if (sel) {
+        sel.dataset.value = input.value;
+        sel.childNodes[0].textContent = next?.label || 'Custom — tuned by hand';
+      }
+    }
+    sel?.dispatchEvent(new CustomEvent('repaint'));
+  });
+
   root.addEventListener('click', ev => {
     if (ev.target.closest('.sel')) return;
     root.querySelectorAll('.selmenu').forEach(m => { m.hidden = true; });
@@ -360,7 +400,7 @@ function syncControls(root) {
     if (!input.value) return;
     sel.dataset.value = input.value;
     const opt = [...sel.querySelectorAll('.selopt')]
-      .find(o => o.textContent.trim().toLowerCase() === input.value.trim().toLowerCase());
+      .find(o => o.dataset.value === input.value);
     sel.childNodes[0].textContent = opt ? opt.textContent : input.value;
   });
 }
@@ -440,6 +480,7 @@ export async function editView(ctx) {
 
       let settings = {};
       let direct = false;
+      let readPeer = null;
       try {
         settings = await api.tunnelSettings(name);
         if (settings.kind === 'direct') { settings = settings.direct || {}; direct = true; }
@@ -455,6 +496,8 @@ export async function editView(ctx) {
         await wireControls(root, { families: [], presets: settings.presets || dopts.presets || [] });
         fill(root, settings);
         syncControls(root);
+      } else if (settings.auto?.tunnelId || settings.transport === 'waticmp') {
+        readPeer = peerEditForm(root, settings, name);
       } else {
         /* The switches and the menus were drawings.
          *
@@ -465,7 +508,7 @@ export async function editView(ctx) {
          * markup now, and each gets the hidden field it stands for, so fill() and
          * read() see them like any other input.
          */
-        await wireControls(root);
+        await wireControls(root, undefined, settings.transport);
         shapeForTransport(root, settings, t);
         /* The tunnel port field shows the address as well when the control port
            is pinned to one.
@@ -481,8 +524,11 @@ export async function editView(ctx) {
            opened showing whichever one the preview happened to be drawn with —
            WebSocket, on every tunnel, including a TCP one. It is derived: the
            family is whichever one lists this tunnel's transport. */
-        selectFamilyFor(root, wireControls.opts, settings.transport);
         syncControls(root);
+        root.addEventListener('change', ev => {
+          if (ev.target.name !== 'transport') return;
+          shapeForTransport(root, { ...settings, transport: ev.target.value }, t);
+        });
       }
 
       if (direct) directBaseline.set(root, readDirect(root));
@@ -521,7 +567,7 @@ export async function editView(ctx) {
         });
       }
       save?.addEventListener('click', async () => {
-        const payload = direct ? { name, direct: readDirect(root) } : { name, ...read(root) };
+        const payload = direct ? { name, direct: readDirect(root) } : readPeer ? { name, ...readPeer() } : { name, ...read(root) };
         save.disabled = true;
         try {
           const r = await api.tunnelEdit(payload);
@@ -541,11 +587,13 @@ export async function editView(ctx) {
              and will not reach it. Its setup link describes the tunnel as it
              is now, and applying it on the kharej brings that end into step —
              so the dialog stays open on the one line that does it. */
-          const both = !direct && tunnelIsIranEnd(t, settings) && ['transport', 'tunnelPort', 'preset']
-            .some(k => payload[k] !== undefined && String(payload[k]) !== String(k === 'tunnelPort' ? bindValue(settings) : settings[k] ?? ''));
+          const managedChanged = managedSettingsChanged(payload.managed, settings.managed);
+          const both = !direct && tunnelIsIranEnd(t, settings) && (payload.waticmp && JSON.stringify(payload.waticmp) !== JSON.stringify(settings.waticmp) || managedChanged || ['transport', 'tunnelPort', 'preset']
+            .some(k => payload[k] !== undefined && String(payload[k]) !== String(k === 'tunnelPort' ? bindValue(settings) : settings[k] ?? '')));
           if (both && !r.node) {
             try {
-              handOver(root, await api.tunnelLink(name), close);
+              const host = payload.transport === 'naive' ? payload.managed?.serverName : undefined;
+              handOver(root, await api.tunnelLink(name, host), close);
               toast('Saved here — one line on the kharej and both ends match again.');
               return;
             } catch (e) { /* the link could not be made; the toast below still holds */ }

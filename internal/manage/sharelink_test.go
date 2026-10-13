@@ -334,7 +334,7 @@ func TestManagedHTTPSSetupInstructionsRequireMatchingBuild(t *testing.T) {
 		t.Fatal("managed helper link would install the published legacy release")
 	}
 	out := capture(t, func() { printLinkBlock(raw, "unused") })
-	for _, expected := range []string{"BP_HELPERS=naive,xray", "HTTPS → Same Protocol → Setup Link", "sudo backpack link apply '" + raw + "'"} {
+	for _, expected := range []string{"BP_HELPERS=naive,xray", "HTTPS → Same Protocol → Setup Link", "sudo fullpack link apply '" + raw + "'"} {
 		if !strings.Contains(out, expected) {
 			t.Fatalf("missing setup instruction %q", expected)
 		}
@@ -347,7 +347,7 @@ func TestManagedHTTPSSetupInstructionsRequireMatchingBuild(t *testing.T) {
 
 func TestManagedHTTPSRealityExportRequiresTheServerPrivateKey(t *testing.T) {
 	cfg := config.Config{Server: config.ServerConfig{BindAddr: "127.0.0.1:3080", Token: "secret", Transport: config.TCP,
-		Xray: config.XrayServerConfig{Binary: "/usr/local/lib/backpack/xray", Mode: "reality", Listen: "0.0.0.0:443"}}}
+		Xray: config.XrayServerConfig{Binary: "/usr/local/lib/fullpack/xray", Mode: "reality", Listen: "0.0.0.0:443"}}}
 	for _, key := range []string{"", "   ", "invalid"} {
 		cfg.Server.Xray.PrivateKey = key
 		if raw, err := shareLinkOf("test", "127.0.0.1", cfg); err == nil || raw != "" {

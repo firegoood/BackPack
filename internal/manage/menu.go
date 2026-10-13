@@ -147,6 +147,10 @@ func editPortsMenu(name string) {
 		tui.Clear()
 		tui.Title("Edit — " + name)
 		fmt.Println()
+		if isPeerSpec(spec) {
+			editPeerMenu(name, spec)
+			return
+		}
 		if managedTransport(selectedTransport(spec)) {
 			if !editManagedTunnelMenu(name, spec) {
 				return

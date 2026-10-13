@@ -14,7 +14,7 @@ func TestAnUploadedArchiveMustBeThisMachines(t *testing.T) {
 	localUpdateDirsFn = func() []string { return []string{dir} }
 	t.Cleanup(func() { localUpdateDirsFn = was })
 
-	for _, name := range []string{"backpack_linux_other.tar.gz", "evil.sh", "../" + LocalAssetName()} {
+	for _, name := range []string{"fullpack_linux_other.tar.gz", "evil.sh", "../" + LocalAssetName()} {
 		if _, err := SaveLocalUpdate(name, strings.NewReader("x"), nil); err == nil {
 			t.Errorf("SaveLocalUpdate(%q) was accepted", name)
 		}

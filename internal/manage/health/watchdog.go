@@ -91,6 +91,12 @@ func RunWatchdog(ctx context.Context) {
 		case <-ticker.C:
 			pairs := establishedPairs()
 			for _, t := range core.List() {
+				if coordinatorOwnsRecovery(t) {
+					fails[t.Name] = 0
+					seenHealthy[t.Name] = false
+					flow.forget(t.Name)
+					continue
+				}
 				if quotaHeld(t.Name) {
 					fails[t.Name] = 0
 					seenHealthy[t.Name] = false
@@ -142,6 +148,10 @@ func RunWatchdog(ctx context.Context) {
 		}
 	}
 }
+
+// Auto's per-pair coordinator owns data probes, debounce and recovery. The
+// legacy watchdog must never restart it based on socket/throughput heuristics.
+func coordinatorOwnsRecovery(t core.Tunnel) bool { return t.Transport == "auto" }
 
 // recoveryWait is how long a restarted tunnel is given to reconnect before the
 // watchdog says whether it did. Long enough for a control channel to be dialled
@@ -415,7 +425,7 @@ func reportRestart(name string, at []time.Time, lastReport map[string]time.Time,
 func checkThroughput(t core.Tunnel, flow *flowWatch, lastRestart map[string]time.Time) bool {
 	// Layer-3 and direct tunnels keep their own counters differently and are
 	// judged on their own terms elsewhere; see directHealthy.
-	if tunnelspec.IsDirectKind(t) {
+	if coordinatorOwnsRecovery(t) || tunnelspec.IsDirectKind(t) {
 		return false
 	}
 	in, out, ok := tunnelFlow(t.Name)

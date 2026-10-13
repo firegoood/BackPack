@@ -35,7 +35,7 @@ func (s *server) handlePrometheus(w http.ResponseWriter, r *http.Request) {
 	gauge(&b, "backpack_swap_percent", "Swap usage percent", m.SwapPercent)
 	gauge(&b, "backpack_disk_percent", "Disk usage percent", m.DiskPercent)
 	gauge(&b, "backpack_uptime_seconds", "System uptime in seconds", m.Uptime.Seconds())
-	gauge(&b, "backpack_monitor_running", "1 when the backpack-monitor service is active",
+	gauge(&b, "backpack_monitor_running", "1 when the fullpack-monitor service is active",
 		boolVal(manage.MonitorRunning()))
 
 	tunnels := manage.List()

@@ -1,7 +1,11 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
+	"io"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -9,6 +13,7 @@ import (
 	"github.com/backpack/backpack/config"
 	"github.com/backpack/backpack/internal/enginectl"
 	"github.com/backpack/backpack/internal/metrics"
+	"github.com/backpack/backpack/internal/tunnel/peerauto"
 )
 
 // The engine's side of the control socket.
@@ -36,6 +41,7 @@ type engineControl struct {
 	// restart ends the running generation. It is replaced on every generation,
 	// because each one has its own context to cancel.
 	restart func()
+	auto    *peerauto.Manager
 
 	generation atomic.Int64
 }
@@ -54,18 +60,58 @@ func (e *engineControl) Status() enginectl.Status {
 	}
 	e.mu.Lock()
 	role, transport := e.role, e.transport
+	auto := e.auto
 	e.mu.Unlock()
+	if auto != nil {
+		s := auto.Snapshot()
+		transport = "auto:" + s.Active
+		connected = s.Active != ""
+	}
+	var diagnostics json.RawMessage
+	if c := liveCollector.Load(); c != nil {
+		diagnostics, _ = json.Marshal(c.Snapshot())
+	}
 	return enginectl.Status{
-		Name:       e.name,
-		Role:       role,
-		Transport:  transport,
-		Connected:  connected,
-		Peer:       metrics.SnapshotPeer(),
-		BytesIn:    in,
-		BytesOut:   out,
-		Generation: int(e.generation.Load()),
+		Name:        e.name,
+		Role:        role,
+		Transport:   transport,
+		Connected:   connected,
+		Peer:        metrics.SnapshotPeer(),
+		BytesIn:     in,
+		BytesOut:    out,
+		Generation:  int(e.generation.Load()),
+		Diagnostics: diagnostics,
 	}
 }
+
+func (e *engineControl) AutoStatus() (any, error) {
+	e.mu.Lock()
+	m := e.auto
+	e.mu.Unlock()
+	if m == nil {
+		return nil, errors.New("peer Auto is not enabled/running for this tunnel")
+	}
+	return m.Snapshot(), nil
+}
+func (e *engineControl) AutoAction(ctx context.Context, body json.RawMessage) error {
+	e.mu.Lock()
+	m := e.auto
+	e.mu.Unlock()
+	if m == nil {
+		return errors.New("peer Auto is not enabled/running for this tunnel")
+	}
+	var a peerauto.Action
+	d := json.NewDecoder(bytes.NewReader(body))
+	d.DisallowUnknownFields()
+	if err := d.Decode(&a); err != nil {
+		return err
+	}
+	if d.Decode(new(any)) != io.EOF {
+		return errors.New("trailing Auto action data")
+	}
+	return m.Action(ctx, a)
+}
+func (e *engineControl) setAuto(m *peerauto.Manager) { e.mu.Lock(); e.auto = m; e.mu.Unlock() }
 
 // RestartTransport ends the running generation, which makes the engine loop
 // start the next one.

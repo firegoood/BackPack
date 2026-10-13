@@ -15,14 +15,14 @@ and one endpoint are currently supported.
 `BP_HELPERS=xray` installs the pinned official Xray helper in a versioned
 directory; `BP_HELPERS=naive,xray` installs both sets. Existing helper directories
 are retained. No helper is started by the installer. Xray transport settings
-require a Backpack build that implements the managed Xray wrapper.
+require a FullPack build that implements the managed Xray wrapper.
 
 ## Managed HTTPS carriers
 
 Use a build containing these changes on both machines. From its source checkout,
 `BP_BUILD_FROM_SOURCE=1 BP_HELPERS=naive,xray bash install.sh` builds that checkout
 and installs the pinned helpers. Without the source flag the installer prefers
-the latest published BackPack release, which may predate these carriers.
+the latest published FullPack release, which may predate these carriers.
 
 These optional Linux helpers carry the existing **TCP reverse engine**. Keep
 `transport = "tcp"` and use the same literal loopback `server.bind_addr` and
@@ -35,7 +35,7 @@ HTTPS Settings changes the public endpoint, internal port and credentials in
 one restart. Ordinary edits preserve it. Iran exports a Setup Link carrying
 the peer credentials, public endpoint and private-certificate trust for
 Kharej; server private keys and binary paths remain local. Use the terminal
-or `backpack link apply` with matching updated builds. The web wizard does
+or `fullpack link apply` with matching updated builds. The web wizard does
 not collect managed-helper credentials.
 
 Set up Iran first, then choose the same HTTPS protocol on Kharej. The internal
@@ -87,7 +87,7 @@ token = "REPLACE-WITH-A-RANDOM-SHARED-TOKEN"
 ports = ["8080=127.0.0.1:8081"]
 accept_udp = false
 [server.naive]
-binary = "/usr/local/lib/backpack/helpers/sing-box/v1.14.2-amd64/sing-box"
+binary = "/usr/local/lib/fullpack/helpers/sing-box/v1.14.2-amd64/sing-box"
 listen = "0.0.0.0:443"
 username = "REPLACE-WITH-A-PRIVATE-USERNAME"
 password = "REPLACE-WITH-A-RANDOM-PASSWORD"
@@ -102,7 +102,7 @@ remote_addr = "127.0.0.1:3080"
 transport = "tcp"
 token = "REPLACE-WITH-A-RANDOM-SHARED-TOKEN"
 [client.naive]
-binary = "/usr/local/lib/backpack/helpers/naive/v154.0.8037.49-4-amd64/naive"
+binary = "/usr/local/lib/fullpack/helpers/naive/v154.0.8037.49-4-amd64/naive"
 server = "tunnel.example.com:443"
 username = "REPLACE-WITH-A-PRIVATE-USERNAME"
 password = "REPLACE-WITH-A-RANDOM-PASSWORD"
@@ -128,7 +128,7 @@ route compatibility must be tested on the intended deployment.
 
 ```toml
 [server.xray]
-binary = "/usr/local/lib/backpack/helpers/xray/v26.3.27-amd64/xray"
+binary = "/usr/local/lib/fullpack/helpers/xray/v26.3.27-amd64/xray"
 listen = "0.0.0.0:443"
 mode = "xhttp"
 uuid = "REPLACE-WITH-A-CANONICAL-UUID"
@@ -140,7 +140,7 @@ key = "/etc/letsencrypt/live/tunnel.example.com/privkey.pem"
 
 ```toml
 [client.xray]
-binary = "/usr/local/lib/backpack/helpers/xray/v26.3.27-amd64/xray"
+binary = "/usr/local/lib/fullpack/helpers/xray/v26.3.27-amd64/xray"
 server = "tunnel.example.com:443"
 mode = "xhttp"
 uuid = "REPLACE-WITH-A-CANONICAL-UUID"
@@ -191,7 +191,7 @@ Protect both TOML files and the helper binaries from untrusted writes. The
 installer verifies pinned
 archive hashes and never replaces an existing version directory.
 
-Backpack carries every tunnel over one transport, chosen when you create the
+FullPack carries every tunnel over one transport, chosen when you create the
 tunnel and changeable later from **Edit → Change transport**. They all move the
 same traffic between the two engines — they differ only in what they put on the
 wire, and therefore in how fast, how reliable, and how hard to detect they are.
@@ -400,7 +400,7 @@ Two things make these more than "WS with TLS":
 
 - **Browser TLS fingerprint.** A WSS tunnel is meant to look like ordinary
   HTTPS, but Go's default TLS ClientHello has a fingerprint of its own that
-  filtering can pick out. Backpack sends a current **Chrome** fingerprint
+  filtering can pick out. FullPack sends a current **Chrome** fingerprint
   instead, so the handshake blends into normal browser traffic.
 - **Session-bound credential.** The certificate is not verified (the tunnel
   trusts its token, and the cert is often self-signed), which would leave a
@@ -468,4 +468,4 @@ UDP را می‌بندد ولی ICMP را نه) و *IP Spoofing* که مبدأ �
 
 ---
 
-*Last verified against Backpack v1.9.0.*
+*Last verified against FullPack v1.9.0.*

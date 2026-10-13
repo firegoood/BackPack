@@ -38,6 +38,10 @@ func SetupServer() {
 	if transport == "" {
 		return
 	}
+	if transport == "waticmp" || transport == "auto" {
+		setupPeerServer(transport)
+		return
+	}
 	if transport == "reality" {
 		defer tui.QuickDefaults()()
 		tui.Info("Space/Enter keeps each suggestion; type a replacement to change it.")
@@ -192,6 +196,10 @@ func SetupClient() {
 
 	transport := chooseTransport()
 	if transport == "" {
+		return
+	}
+	if transport == "waticmp" || transport == "auto" {
+		setupPeerClient(transport)
 		return
 	}
 	if transport == "reality" {
@@ -406,6 +414,14 @@ func setupClientFromLink(chosen string) {
 // reverseClientFromLink is the kharej's spec, mirrored from the Iran server's
 // link. Pure, so the mirroring can be tested without a terminal.
 func reverseClientFromLink(link ShareLink, host string) TunnelSpec {
+	if link.WatEnrollment != "" || link.AutoEnrollment != "" {
+		f := MirrorForPeer(link)
+		if link.Host == "" {
+			f.ServerAddr = host
+		}
+		s, _ := specFromPeerNew(f.ToNewTunnel())
+		return s
+	}
 	s := TunnelSpec{
 		Role:       "client",
 		Transport:  link.Tr,
@@ -550,7 +566,7 @@ func summariseReverse(s TunnelSpec, host, link string) {
 		tui.Info("Use Iran's Setup Link On Kharej To Copy The Paired HTTPS Settings.")
 	}
 	if link != "" {
-		printLinkBlock(link, "sudo backpack → Setup Kharej → Reverse → Setup Link")
+		printLinkBlock(link, "sudo fullpack → Setup Kharej → Reverse → Setup Link")
 	}
 	tui.Rule()
 	fmt.Println()

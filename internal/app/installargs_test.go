@@ -7,11 +7,11 @@ import (
 	"testing"
 )
 
-// The one-line install the Iran server prints for a kharej without Backpack:
+// The one-line install the Iran server prints for a kharej without FullPack:
 //
 //	bash <(curl -fsSL …/install.sh) link apply 'backpack://…'
 //
-// install.sh has to take exactly that — with or without a leading "backpack" —
+// install.sh has to take exactly that — with or without a leading "fullpack" —
 // hand it to the installed binary instead of opening the menu, and go on
 // refusing anything else. The argument block is run here as the script runs it.
 func TestTheInstallerTakesASetupLinkAndNothingElse(t *testing.T) {
@@ -42,7 +42,7 @@ func TestTheInstallerTakesASetupLinkAndNothingElse(t *testing.T) {
 	const link = "backpack://H4sIAAAAAAAC_abc"
 	for _, args := range [][]string{
 		{"link", "apply", link},
-		{"backpack", "link", "apply", link},
+		{"fullpack", "link", "apply", link},
 	} {
 		out, code := run(args...)
 		if code != 0 || out != "link\napply\n"+link {

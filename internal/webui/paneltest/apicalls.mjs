@@ -68,6 +68,7 @@ const samples = {
   tunnelDefaults: [[{ preset: 'balanced', role: 'server', transport: 'tcp' }]],
   tunnelToken: [[]], tunnelSuggest: [[]],
   tunnelCreate: [[{}]], directOptions: [[]], directDefaults: [['iran']], directCreate: [[{}]],
+  peerEnrollment: [['peer', 'auto', 'backpack://3.private']],
   health: [[]], linkTestStatus: [[]], linkTestRun: [['t1']],
   logs: [['t1'], ['t1', 'peer']], history: [['t1'], ['t1', 30]],
   confHistory: [['t1']], confRestore: [['t1', 1790000000]],
@@ -93,17 +94,18 @@ const samples = {
   proxyEnable: [[{ type: 'socks5', port: 1085, username: 'u', password: 'p' }]],
   proxyDisable: [[]], proxyTest: [[]],
   tunnelLink: [['fr-relay'], ['fr-relay', '203.0.113.7']],
+  autoStatus: [['fr-relay']], autoAction: [['fr-relay', 'test-now', 'wat']],
   tunnelQuota: [['fr-relay']], setTunnelQuota: [['fr-relay', 5e12], ['fr-relay', 0]],
-  backups: [[]], backupCreate: [[]], backupTest: [['backpack-backup-1.tar.gz']],
-  backupRestoreSaved: [['backpack-backup-1.tar.gz']], backupDelete: [['backpack-backup-1.tar.gz']],
-  setOffsite: [['rclone copy {} remote:backpack/']], sendOffsite: [[]],
+  backups: [[]], backupCreate: [[]], backupTest: [['fullpack-backup-1.tar.gz']],
+  backupRestoreSaved: [['fullpack-backup-1.tar.gz']], backupDelete: [['fullpack-backup-1.tar.gz']],
+  setOffsite: [['rclone copy {} remote:fullpack/']], sendOffsite: [[]],
   localUpdate: [[]], uploadUpdate: [[new Blob(['x']), new Blob(['y'])]], installLocalUpdate: [[]],
   rollback: [['20260901-1200']],
   panelSelf: [[]], panelNewCode: [[]], panelPath: [['random'], ['custom', 'my-panel']], panelRestart: [[]],
 };
 // Exports that build an address instead of fetching one; the address is
 // checked as the GET a browser makes when it follows it.
-const addresses = { backupExportURL: [[]], savedBackupURL: [['backpack-backup-1.tar.gz']] };
+const addresses = { backupExportURL: [[]], savedBackupURL: [['fullpack-backup-1.tar.gz']] };
 const notRoutes = new Set(['base', 'terminalURL']);
 
 const api = await import(new URL('../panel/js/api.js', import.meta.url));

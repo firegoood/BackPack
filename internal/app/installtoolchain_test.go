@@ -34,12 +34,33 @@ func TestInstallerChecksTheBundledGoPatchVersion(t *testing.T) {
 		want    bool
 	}{
 		{"1.26.5", false}, {"1.26.6", true}, {"1.26.10", true},
-		{"1.25.99", false}, {"1.27.0", true}, {"1.27rc1", false},
+		{"1.25.99", false}, {"1.27.0", false}, {"1.27.1", false},
+		{"1.27.2", true}, {"1.28.0", true}, {"1.27rc1", false},
 	} {
 		t.Run(tc.version, func(t *testing.T) {
 			// Auto mode pretends to be current; local mode exposes the older compiler.
 			fake := `fake_go() { if [[ "$GOTOOLCHAIN" == local ]]; then echo 'go version go` + tc.version + ` linux/amd64'; else echo 'go version go1.26.6 linux/amd64'; fi; }`
 			cmd := exec.Command("bash", "-c", "export GOTOOLCHAIN=auto\nGO_VERSION=1.26.6\nGO_MIN_MINOR=26\n"+functions+"\n"+fake+"\ngo_new_enough fake_go")
+			out, err := cmd.CombinedOutput()
+			if (err == nil) != tc.want {
+				t.Fatalf("accepted=%v want %v: %s (%v)", err == nil, tc.want, out, err)
+			}
+		})
+	}
+}
+
+func TestInstallerRejectsKnownUnpatchedNewerGo(t *testing.T) {
+	functions := installerGoFunctions(t)
+	for _, tc := range []struct {
+		version string
+		want    bool
+	}{
+		{"1.26.8", false}, {"1.26.9", true},
+		{"1.27.0", false}, {"1.27.1", false}, {"1.27.2", true},
+	} {
+		t.Run(tc.version, func(t *testing.T) {
+			fake := `fake_go() { echo 'go version go` + tc.version + ` linux/amd64'; }`
+			cmd := exec.Command("bash", "-c", "GO_VERSION=1.26.9\n"+functions+"\n"+fake+"\ngo_new_enough fake_go")
 			out, err := cmd.CombinedOutput()
 			if (err == nil) != tc.want {
 				t.Fatalf("accepted=%v want %v: %s (%v)", err == nil, tc.want, out, err)
@@ -56,6 +77,9 @@ func TestInstallerBuildsWithTheSelectedGoBinary(t *testing.T) {
 		{"new-path-old-local", "1.26.6", "1.26.5", "PATH"},
 		{"old-path-new-local", "1.26.5", "1.26.6", "LOCAL"},
 		{"both-too-old", "1.26.5", "1.26.5", ""},
+		{"unpatched-newer-path-safe-local", "1.27.1", "1.26.9", "LOCAL"},
+		{"patched-newer-path-safe-local", "1.27.2", "1.26.9", "PATH"},
+		{"only-unpatched-newer", "1.27.1", "1.27.0", ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := t.TempDir()
@@ -78,8 +102,8 @@ else exit 4; fi
 			}
 			// Redirect the system paths before running any installer functions.
 			block := strings.NewReplacer("/usr/local/go/bin/go", `"$PWD/local-bin/go"`,
-				"/usr/local/go/bin", "$PWD/local-bin", "/etc/backpack/install_path", `"$PWD/install_path"`).Replace(functions)
-			prefix := "set -euo pipefail\nexport GOTOOLCHAIN=auto\nGO_VERSION=1.26.6\nGO_MIN_MINOR=26\nSCRIPT_DIR=$PWD\nINSTALL_DIR=$PWD\nBIN_PATH=$PWD/backpack\nexport PATH=\"$PWD/path-bin:$PATH\"\n"
+				"/usr/local/go/bin", "$PWD/local-bin", "/etc/fullpack/install_path", `"$PWD/install_path"`).Replace(functions)
+			prefix := "set -euo pipefail\nexport GOTOOLCHAIN=auto\nGO_VERSION=1.26.6\nGO_MIN_MINOR=26\nSCRIPT_DIR=$PWD\nINSTALL_DIR=$PWD\nBIN_PATH=$PWD/fullpack\nexport PATH=\"$PWD/path-bin:$PATH\"\n"
 			stubs := "\ninfo() { echo \"$*\"; }; warn() { echo \"$*\"; }; err() { echo \"$*\" >&2; }; download_go() { echo DOWNLOAD_REQUIRED >&2; return 1; };\n"
 			cmd := exec.Command("bash", "-c", prefix+block+stubs+"build_from_source")
 			cmd.Dir = dir

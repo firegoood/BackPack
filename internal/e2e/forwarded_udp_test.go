@@ -19,7 +19,7 @@ import (
 // tcpmux, ws, wss, wsmux, kcp or quic bound no UDP socket at all and the
 // datagrams were refused by the kernel with nothing logged. Xray, 3x-ui and
 // Shadowsocks users hit it constantly: the browser worked, UDP did not, and the
-// usual workaround was to build a GRE tunnel underneath and run Backpack over
+// usual workaround was to build a GRE tunnel underneath and run FullPack over
 // that, which is a whole second tunnel to work around a missing listener.
 //
 // These run a real tunnel per transport and send a datagram through it.

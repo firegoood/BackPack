@@ -26,7 +26,7 @@ func TestTheConnectionTestAcrossARealPath(t *testing.T) {
 	if os.Getenv("BP_L3_LIVE") == "" {
 		t.Skip("set BP_L3_LIVE=1 on a host that allows unprivileged user namespaces to run this")
 	}
-	bin := filepath.Join(t.TempDir(), "backpack")
+	bin := filepath.Join(t.TempDir(), "fullpack")
 	build := exec.Command("go", "build", "-o", bin, "../..")
 	build.Stderr = os.Stderr
 	if err := build.Run(); err != nil {
@@ -73,7 +73,7 @@ func TestTheConnectionTestAcrossARealPath(t *testing.T) {
 				t.Errorf("the kharej did not print the verdict\n%s", out)
 			}
 			for _, r := range results {
-				if managedTransport(r.Transport) && r.Status == ctSkipped {
+				if (managedTransport(r.Transport) || r.Transport == "waticmp" || r.Transport == "waticmp-reverse") && r.Status == ctSkipped {
 					t.Logf("optional %s skipped: %s", r.Transport, r.Detail)
 					continue
 				}
@@ -115,8 +115,12 @@ func TestConnTestIranSide(t *testing.T) {
 			connTestDirect = []string{tr}
 		}
 	}
+	spoofSrc := "10.10.10.10"
+	if os.Getenv("CT_ONLY") != "" {
+		spoofSrc = ""
+	}
 	s, link, err := StartConnTestIran(ConnTestOptions{Host: os.Getenv("CT_HOST"), Direct: true, SNIDomain: "www.example.com",
-		SpoofSrc: "10.10.10.10", Preset: os.Getenv("CT_PRESET")})
+		SpoofSrc: spoofSrc, Preset: os.Getenv("CT_PRESET"), WatPeerIPv4: os.Getenv("CT_WAT_PEER")})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -51,7 +51,7 @@ func healthLevel(l manage.CheckLevel) string {
 
 // handleAlerts returns what the monitor's alert watcher has recorded: the
 // conditions active right now and the recent messages. The panel only reads;
-// the watcher in backpack-monitor writes.
+// the watcher in fullpack-monitor writes.
 func (s *server) handleAlerts(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, alerthist.Load())
 }

@@ -15,7 +15,7 @@
 // gives it. The panel dials out; nothing listens for this on either side beyond
 // the sshd that was already running.
 //
-// One command runs there — Execute, reached through `backpack node exec` — and
+// One command runs there — Execute, reached through `fullpack node exec` — and
 // it performs a single operation from the list in ops.go and refuses anything
 // else. There is no state on the far machine that belongs to being managed: no
 // service, no config, nothing to clean up when it leaves the fleet.

@@ -9,6 +9,7 @@ import (
 	"github.com/backpack/backpack/internal/server/transport"
 	"github.com/backpack/backpack/internal/tunnel/chain"
 	"github.com/backpack/backpack/internal/tunnel/naive"
+	"github.com/backpack/backpack/internal/tunnel/waticmp"
 	"github.com/backpack/backpack/internal/utils"
 	"github.com/backpack/backpack/internal/utils/handlers"
 	"github.com/backpack/backpack/internal/utils/network"
@@ -21,7 +22,7 @@ import (
 // are kept. It must survive restarts: re-issuing works, but doing it repeatedly
 // runs into Let's Encrypt's rate limits, and then the tunnel has no
 // certificate at all until the limit resets.
-const acmeCacheDir = "/etc/backpack/acme"
+const acmeCacheDir = "/etc/fullpack/acme"
 
 type Server struct {
 	config *config.ServerConfig
@@ -160,6 +161,17 @@ type runner interface {
 // the same ports.
 func (s *Server) startTransport(ctx context.Context, tr config.TransportType) runner {
 	switch tr {
+	case config.WATICMP:
+		r := transport.NewWatServer(ctx, &transport.WatConfig{
+			Wat: waticmp.SettingsOf(s.config.WatICMP, s.config.Token), BindAddr: s.config.BindAddr,
+			Token: s.config.Token, Ports: s.config.Ports, AcceptUDP: s.config.ForwardsUDP(),
+			ChannelSize: s.config.ChannelSize, Heartbeat: time.Duration(s.config.Heartbeat) * time.Second,
+			KeepAlive: time.Duration(s.config.Keepalive) * time.Second, WebPort: s.config.WebPort,
+			Sniffer: s.config.Sniffer, SnifferLog: s.config.SnifferLog, ProxyProtocol: s.config.ProxyProtocol,
+			MaxConnections: s.config.MaxConnections, BandwidthMbps: s.config.BandwidthMbps,
+		}, s.logger)
+		go r.Start()
+		return r
 	case config.TCP, config.STEALTH:
 		tcpConfig := &transport.TcpConfig{
 			BindAddr:       s.config.BindAddr,

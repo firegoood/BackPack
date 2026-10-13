@@ -28,6 +28,9 @@ const (
 	// ICMP, where the tunnel rides in ping packets. Linux only, and needs a raw
 	// socket. Everything above the packet layer is identical to KCP.
 	XDI TransportType = "xdi"
+	// WATICMP uses the native authenticated Wat Session/Stream engine. It has
+	// an explicit peer and packet direction and does not share the xDi wire.
+	WATICMP TransportType = "waticmp"
 	// SPOOF carries the KCP transport inside raw IPv4 packets whose source
 	// address is forged — experimental "IP Spoofing". It is for a path that
 	// filters on the real flow's source, or that only lets a particular address
@@ -275,6 +278,8 @@ type PckConfig struct {
 
 // ServerConfig represents the configuration for the server.
 type ServerConfig struct {
+	// WatICMP explicitly configures native ICMP stream forwarding, independent of xDi and disabled by default.
+	WatICMP WatICMPConfig `toml:"waticmp"`
 	// Naive optionally wraps the loopback TCP reverse listener in HTTP/2 with a tunnel-owned sing-box helper; experimental and disabled when empty.
 	Naive NaiveServerConfig `toml:"naive"`
 	// Xray optionally wraps the loopback reverse TCP listener in XHTTP/TLS or RAW/REALITY using a tunnel-owned official helper.
@@ -458,6 +463,8 @@ func (s ServerConfig) ForwardsUDP() bool {
 
 // ClientConfig represents the configuration for the client.
 type ClientConfig struct {
+	// WatICMP carries the Kharej stream engine over the enrolled native ICMP pair and packet direction.
+	WatICMP WatICMPConfig `toml:"waticmp"`
 	// Naive optionally reaches the loopback reverse target through a tunnel-owned official Chromium Naive helper; experimental and disabled when empty.
 	Naive NaiveClientConfig `toml:"naive"`
 	// Xray optionally reaches the loopback reverse target through a restricted tunnel-owned XHTTP/TLS or RAW/REALITY helper.
@@ -628,6 +635,8 @@ type ClientConfig struct {
 
 // Config represents the complete configuration, including both server and client settings.
 type Config struct {
+	// Auto is the explicitly enabled enrolled reverse-stream coordinator; absent or disabled preserves manual behavior.
+	Auto AutoConfig `toml:"auto"`
 	// Server is the reverse tunnel's Iran end: it listens for the client and
 	// exposes the forwarded ports. Present only in a configuration that asks for
 	// one; the three engines are mutually exclusive.

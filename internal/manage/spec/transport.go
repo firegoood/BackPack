@@ -44,7 +44,7 @@ func IsDatagram(t string) bool {
 		// probe is exactly the right thing for them.
 		return false
 	}
-	return t == "udp" || t == "kcp" || t == "xdi" || t == "quic" || t == "pck"
+	return t == "udp" || t == "kcp" || t == "xdi" || t == "quic" || t == "pck" || t == "waticmp" || t == "auto"
 }
 
 // SupportsProxyProtocol reports whether a transport can carry the PROXY
@@ -72,7 +72,7 @@ func NeedsTLS(t string) bool {
 // carriers.
 func ValidTransport(t string) bool {
 	switch t {
-	case "tcp", "tcpmux", "udp", "kcp", "ws", "wss", "wsmux", "wssmux", "stealth", "xdi", "quic", "pck":
+	case "tcp", "tcpmux", "udp", "kcp", "ws", "wss", "wsmux", "wssmux", "stealth", "xdi", "quic", "pck", "waticmp":
 		return true
 	}
 	return false

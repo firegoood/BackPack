@@ -2,7 +2,7 @@
  *
  *   Auto Refresh     every tunnel restarted on a schedule, counted down to
  *   Built-in Proxy   a SOCKS5 or HTTP backend, wired to a tunnel's port
- *   File Locations   everything Backpack keeps, where, and how big
+ *   File Locations   everything FullPack keeps, where, and how big
  *
  * Nothing opens a dialog: each tool is a panel with its state, its controls
  * and its result in the same place, because each is something you set and
@@ -178,7 +178,7 @@ function proxyCard(p, test) {
 /* ---- File Locations ------------------------------------------------------ */
 let fileQuery = '';
 let filesOpen = false;
-const GROUPS = ['Backpack', 'Services', 'Tunnels', 'Backups'];
+const GROUPS = ['FullPack', 'Services', 'Tunnels', 'Backups'];
 
 function fileRows(files) {
   const q = fileQuery.trim().toLowerCase();
@@ -356,7 +356,7 @@ export function manageView(ctx) {
       await api.tunnelEdit({ name, ports: [...have, `${pub}=127.0.0.1:${port}`].join(',') });
       const type = proxyType || 'socks5';
       const q = s => `'${String(s).replace(/'/g, `'\\''`)}'`;
-      wired = { tunnel: name, pub, cmd: `sudo backpack proxy enable ${type} ${port}${user ? ` --user ${q(user)} --pass ${q(pass)}` : ''}` };
+      wired = { tunnel: name, pub, cmd: `sudo fullpack proxy enable ${type} ${port}${user ? ` --user ${q(user)} --pass ${q(pass)}` : ''}` };
       store.loadTunnels().catch(() => {});
       repaintProxy();
       toast(`${name} forwards :${pub} to the proxy — finish it on the kharej.`);

@@ -57,6 +57,7 @@ func connTestIranMenu() {
 		return
 	}
 	preset := presets[pick]
+	watPeer := strings.TrimSpace(tui.Prompt("Kharej IPv4 For Native Wat Normal/Reverse Tests (Blank To Skip): "))
 	tui.StopIfInputGone()
 
 	// Every transport is tested; what needs root is left out only without it.
@@ -72,7 +73,7 @@ func connTestIranMenu() {
 	defer stop()
 	ctMenuStage(os.Stdout, "1", "Preparing test tunnels", "Checking listeners, helpers and REALITY cover compatibility.")
 	s, link, err := StartConnTestIran(ConnTestOptions{Context: ctx, Host: host, Direct: direct,
-		Preset: preset, SpoofSrc: spoof})
+		Preset: preset, SpoofSrc: spoof, WatPeerIPv4: watPeer})
 	if err != nil {
 		tui.Error(err.Error())
 		tui.PressEnter()
@@ -82,7 +83,7 @@ func connTestIranMenu() {
 	ctMenuStartup(os.Stdout, s)
 
 	fmt.Println()
-	ctMenuStage(os.Stdout, "2", "Connect the Kharej", "On Kharej: sudo backpack → 0 → Kharej. Paste the full link below.")
+	ctMenuStage(os.Stdout, "2", "Connect the Kharej", "On Kharej: sudo fullpack → 0 → Kharej. Paste the full link below.")
 	fmt.Println()
 	fmt.Println(tui.Color(tui.Bold+tui.White, link))
 	fmt.Println()

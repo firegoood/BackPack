@@ -40,6 +40,13 @@ func FuzzDecodeShareLink(f *testing.F) {
 
 	// Valid base64 of valid gzip of something that is not JSON, which is the
 	// case that gets furthest in before being rejected.
+	native := ShareLink{Name: "fuzz-peer", Kind: "reverse", From: "iran", Tok: strings.Repeat("k", 32), Tr: "waticmp", Port: "0", Ports: "443", Host: "192.0.2.1",
+		WatEnrollment: `{"iranIp":"192.0.2.1","kharejIp":"192.0.2.2","settings":{"enabled":true,"tunnelId":"fuzz-native-enrollment","direction":"reverse"}}`}
+	if good, err := native.Encode(); err == nil {
+		f.Add(good)
+	} else {
+		f.Fatal(err)
+	}
 	var buf bytes.Buffer
 	zw := gzip.NewWriter(&buf)
 	zw.Write([]byte("this is not json"))

@@ -243,7 +243,7 @@ func currentBinary(t *testing.T) string {
 	if b := os.Getenv(currentBinaryEnv); b != "" {
 		return b
 	}
-	out := filepath.Join(t.TempDir(), "backpack-current")
+	out := filepath.Join(t.TempDir(), "fullpack-current")
 	cmd := exec.Command("go", "build", "-o", out, "../..")
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {

@@ -1,0 +1,244 @@
+{
+  "display_name": "FullPack",
+  "command": "fullpack",
+  "repository": "firegoood/BackPack",
+  "upstream_repository": "AminMGMT/BackPack",
+  "preserve_files": [
+    "LICENSE",
+    "NOTICE",
+    "TRADEMARK.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "internal/app/attribution_test.go"
+  ],
+  "preserve_literals": [
+    "github.com/backpack/backpack",
+    "Based on BackPack by Amin Mohammadi (AminMGMT)",
+    "Based on BackPack",
+    "backpack://",
+    ".backpack-backup.json",
+    "backpack-socks-v1:",
+    "backpack-kcp-v1",
+    "backpack-xdi-v1:",
+    "backpack-pck-v1:",
+    "backpack-spoof-v1:",
+    "backpack-noise-v1",
+    "backpack-stealth-psk-v1",
+    "backpack-l3-v1",
+    "backpack-l3-psk-v1",
+    "backpack-direct-v1|",
+    "backpack l3 quic stateless reset v1",
+    "backpack-conntest/",
+    "backpack-decoy",
+    "backpack-quic",
+    "EXPORTER-backpack-quic-binding-v1",
+    "EXPORTER-backpack-wss-binding-v1",
+    "X-Backpack-Proof",
+    "X-Backpack-Fix",
+    "backpack release ",
+    "conntest.backpack.invalid"
+  ],
+  "preserve_patterns": [
+    "BACKPACK_[A-Z_]+",
+    "backpack_(?:panel|tunnel|kcp|cpu|mem|swap|disk|uptime|monitor)_[a-z_]+"
+  ],
+  "preserve_bare_username_files": [
+    "internal/manage/conntest.go",
+    "internal/manage/setup.go",
+    "internal/manage/spooftest.go",
+    "internal/manage/updaterelay.go",
+    "internal/manage/health/diagnose.go",
+    "internal/socks/socks5.go",
+    "internal/manage/managedwebapi.go"
+  ],
+  "required": {
+    "internal/app/app.go": [
+      "RepoOwner = \"firegoood\"",
+      "RepoName  = \"BackPack\"",
+      "InstallDir = \"/root/FullPack\"",
+      "ConfigDir = \"/etc/fullpack\"",
+      "BinPath = \"/usr/local/bin/fullpack\"",
+      "fullpack_linux_"
+    ],
+    "Makefile": [
+      "BIN      := fullpack",
+      "release/fullpack_linux_$$a.tar.gz"
+    ],
+    "install.sh": [
+      "REPO=\"firegoood/BackPack\"",
+      "BIN_PATH=\"/usr/local/bin/fullpack\"",
+      "ASSET=\"fullpack_linux_${ARCH}.tar.gz\"",
+      "got_major == 1 && got_minor == 27 && got_patch < 2"
+    ],
+    ".github/workflows/release.yml": [
+      "release/fullpack_linux_*.tar.gz",
+      "Verify FullPack customizations"
+    ],
+    ".github/workflows/ci.yml": [
+      "Verify FullPack customizations"
+    ],
+    "internal/tui/tui.go": [
+      "FullPack"
+    ],
+    "internal/app/installtoolchain_test.go": [
+      "TestInstallerRejectsKnownUnpatchedNewerGo",
+      "unpatched-newer-path-safe-local",
+      "only-unpatched-newer"
+    ],
+    "internal/cli/cli.go": [
+      "fullpack \u2014 non-interactive commands",
+      "fullpack version"
+    ],
+    "internal/webui/panel/index.html": [
+      "<title>FullPack</title>"
+    ],
+    "internal/webui/assets/login.html": [
+      "<h1>FullPack</h1>"
+    ],
+    "internal/webui/assets/twofactor.html": [
+      "<h1>FullPack</h1>"
+    ],
+    "internal/webui/handlers_app.go": [
+      "\"name\": \"FullPack Panel\"",
+      "\"short_name\": \"FullPack\""
+    ],
+    "README.md": [
+      "<h1 align=\"center\">FullPack</h1>",
+      "Based on BackPack by Amin Mohammadi (AminMGMT)",
+      "img/fullpack.svg"
+    ],
+    "img/fullpack.svg": [
+      "FullPack"
+    ],
+    "internal/manage/webapi.go": [
+      "groups := cliTransportGroups()",
+      "editedReverseSpec(s, e)",
+      "selectedTransport(s)",
+      "applyManagedHTTPS(&s, chosenTransport, public, m)"
+    ],
+    "internal/manage/directwebapi.go": [
+      "return DirectCarriers()"
+    ],
+    "internal/manage/managedwebapi.go": [
+      "func applyManagedHTTPS(",
+      "func editedReverseSpec(",
+      "validateManagedSpec(*s)",
+      "webRealityProbe(ctx, m.Target, m.ServerName, m.Binary)",
+      "key == \"password\" || key == \"privateKey\"",
+      "!presetSuitsTransport(s.Preset, \"tcp\")"
+    ],
+    "internal/manage/managedwebapi_test.go": [
+      "TestPanelHTTPSCreatesBothRolesAndPublicSettings",
+      "TestPanelHTTPSServerGeneratesMatchingPeerIdentity",
+      "TestPanelHTTPSRejectsUnsafeOrInvalidInputs",
+      "TestPanelDirectMenuIncludesSpoofAndSNIWithWorkingForms",
+      "TestPanelNaiveRefusesCertificateHostnameMismatch",
+      "TestPanelHTTPSSwitchRetiresKCPOnlyPreset"
+    ],
+    "internal/webui/panel/js/ui/managed.js": [
+      "['naive', 'xhttp', 'reality']",
+      "export function shapeManaged",
+      "export function managedSettingsChanged",
+      "previous && previous !== tool"
+    ],
+    "internal/webui/panel/js/views/add.js": [
+      "shapeManaged(root, t, chosen.side",
+      "[name=\"managed.serverName\"]",
+      "api.peerEnrollment(peer.name, peer.transport, peer.peerEnrollment)",
+      "Iran enrollment imported"
+    ],
+    "internal/webui/panel/js/views/edit.js": [
+      "shapeManaged(root, t, server",
+      "ev.target.name !== 'transport'",
+      "managedSettingsChanged(payload.managed, settings.managed)",
+      "presetsForTransport(opts.presets, trOf())"
+    ],
+    "internal/webui/panel/views/add.html": [
+      "managed-https",
+      "name=\"managed.binary\"",
+      "name=\"managed.target\"",
+      "name=\"sniDomain\"",
+      "name=\"spoofPeerIp\""
+    ],
+    "internal/webui/panel/views/edit.html": [
+      "managed-https",
+      "name=\"managed.password\"",
+      "name=\"managed.privateKey\""
+    ],
+    "internal/manage/peerform.go": [
+      "n.Managed = &ManagedHTTPS",
+      "CAPEM: l.HelperCA"
+    ],
+    "internal/webui/handlers_nodes.go": [
+      "if t.Managed == nil {",
+      "carryPeerManaged(&t, current)",
+      "host = settings.Managed.ServerName"
+    ],
+    "internal/webui/nodes_test.go": [
+      "TestManagedPeerRebuildKeepsLocalHelperAndUsesNaiveCertificateAddress",
+      "TestManagedPeerHelperOnlyCarriesAcrossCompatibleProtocols"
+    ],
+    "internal/manage/sharelink.go": [
+      "validateNaiveLinkHost(cert, l.Host)"
+    ],
+    "internal/webui/paneltest/managed.test.js": [
+      "clearing HTTPS identity or host settings requires a fresh peer setup link",
+      "blank redacted secrets preserve the identity and need no handoff",
+      "switching from Xray to Naive retires the incompatible executable",
+      "XHTTP and REALITY preserve their shared custom Xray executable"
+    ],
+    "internal/webui/stats.go": [
+      "tunnels[i] = publicPanelTunnel(t, cfg)",
+      "func publicPanelTunnel(",
+      "managed && net.ParseIP(ip).IsLoopback()"
+    ],
+    "internal/webui/managedstats_test.go": [
+      "TestPanelHTTPSCardsAndProbesUseThePublicEndpoint",
+      "TestPanelHTTPSDoesNotReportItsLocalHelperAsTheRemotePeer"
+    ],
+    "internal/webui/panel/js/ui/presets.js": [
+      "export function presetsForTransport",
+      "!p.kcpOnly || transport === 'kcp'"
+    ],
+    "internal/webui/paneltest/presets.test.js": [
+      "HTTPS and other non-KCP editors never offer the KCP-only profile",
+      "returning to KCP restores all profiles without changing the API list"
+    ],
+    ".gitignore": ["/11/WatTunnel/"],
+    "tools/check-gofmt.sh": ["./11"],
+    "tools/package-release.sh": ["licenses/waticmp", "ORIGIN.json"],
+    "config/config.go": ["WATICMP TransportType = \"waticmp\""],
+    "config/auto.go": ["AllowPlaintextFallback", "AllowDegradationSwitch", "MaxSwitchesPerHour", "MaxConnections"],
+    "cmd/defaults.go": ["checkWatICMP", "peerauto.Validate(cfg)", "native Wat ICMP does not implement legacy"],
+    "cmd/cmd.go": ["peerauto.New", ".auto-state.json"],
+    "internal/tunnel/waticmp/conn.go": ["crypto/ecdh", "IsMulticast()", "net.IPv4bcast", "github.com/backpack/backpack/waticmp/v1/enrollment:", "authenticated_payload"],
+    "internal/tunnel/waticmp/engine/session.go": ["maxSessionWin = 16 << 20", "fresh authenticated session key and ID", "AuthDropped", "ReplayDropped", "[4096]lateAckTime", "ipIcmpHdr = 52"],
+    "internal/tunnel/waticmp/engine/cc.go": ["return unsampledRTT", "minRate = min(minRate, maxRate)"],
+    "internal/tunnel/waticmp/engine/safety_test.go": ["TestWindowRetirementMustNotUnderflow", "TestPumpSnapshotBeforeReceiveDoesNotOverflowAckDelay", "TestUnauthenticatedOrReplayedPacketCannotAllocateStreams", "TestFirstDelayedAckCanTeachTheSessionItsRTT", "TestLateAckLearnsAChangedRTTAfterPacketRetirement"],
+    "internal/tunnel/waticmp/engine/LICENSE": ["MIT License", "2026 Amirreza"],
+    "internal/tunnel/waticmp/engine/ORIGIN.json": ["2.4.8", "b02cf1a38a42649f8066ca14573d5a98028e94ccf7e676460979808b5b7cf7a2"],
+    "internal/tunnel/peerauto/config.go": ["plaintext Auto adapters are not verified", "Auto is the sole switching owner", "manifestHash", "candidate listeners conflict"],
+    "internal/tunnel/peerauto/store.go": ["Generation++", "f.Sync()", "os.Rename", "d.Sync()"],
+    "internal/tunnel/peerauto/lock_linux.go": ["unix.O_NOFOLLOW", "unix.O_NONBLOCK", "unix.LOCK_EX|unix.LOCK_NB"],
+    "internal/tunnel/peerauto/manager.go": ["PREPARE_SWITCH", "COMMIT_ACK", "fenceLocked", "FlowStatus", "stateStore"],
+    "internal/tunnel/peerauto/probes.go": ["pendingProbe", "RespondPaced", "probe"],
+    "internal/tunnel/peerauto/policy.go": ["errProbePressure", "errProbeBusy", "recordCommit", "MinimumDwell", "NO_ROUTE"],
+    "internal/tunnel/peerauto/router.go": ["requestHeader", "trackFlow", "peer backend unavailable (carrier remains healthy)"],
+    "internal/manage/peerlink.go": ["peer-enrollment/v3:", "encodePeerLink", "enrollment from Iran"],
+    "internal/manage/peerenrollment.go": ["PeerNewTunnel", "matching trusted version-3 Iran enrollment link"],
+    "internal/manage/conntest_waticmp.go": ["waticmp", "watEnrollment"],
+    "internal/webui/handlers_peerauto.go": ["handlePeerAuto", "handlePeerEnrollment", "DisallowUnknownFields", "MaxBytesReader"],
+    "internal/webui/server.go": ["/api/tunnel/auto", "/api/tunnel/peer-enrollment"],
+    "internal/webui/panel/js/ui/peerauto.js": ["Import an enrolled Kharej endpoint", "peerSetupPayload", "peerEditForm", "api.autoAction", "n.closest('.grp3')"],
+    "internal/cli/licenses.go": ["wat.License", "wat.Origin"],
+    "internal/menu/system.go": ["Configuration And Fencing State Were Kept", "manage.RemoveInstalledHelpers()", "Remaining Installation Files Were Kept"],
+    "internal/manage/installedhelpers.go": ["/usr/local/lib/fullpack", "os.ModeSymlink", "os.RemoveAll(root)"],
+    "internal/manage/installedhelpers_test.go": ["TestInstalledHelperCleanupPreservesOperatorFilesAndSymlinkTargets", "TestInstalledHelperCleanupRefusesRedirectedOrPublicRoots"],
+    "internal/e2e/peerauto_test.go": ["TestPeerCoordinatedNativeSwitchKeepsUserListener", "TestPeerCoordinatedAuthenticatedAdapters", "sole-candidate", "Flows.Drained"],
+    "internal/e2e/testdata/peerauto-netns.sh": ["WATICMP_NETNS", "NO_ROUTE", "WATICMP_DEGRADATION", "severe degradation"],
+    "internal/e2e/testdata/icmp-coexist.sh": ["ReplayDropped", "AuthDropped"],
+    "docs/waticmp-dual-server-design.md": ["خلاصهٔ فارسی", "11/WatTunnel"],
+    "docs/waticmp-verification.md": ["خلاصهٔ فارسی", "NOT VERIFIED"]
+  }
+}

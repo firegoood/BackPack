@@ -11,6 +11,7 @@ import (
 	"github.com/backpack/backpack/internal/app"
 	"github.com/backpack/backpack/internal/metrics"
 	"github.com/backpack/backpack/internal/quota"
+	"github.com/backpack/backpack/internal/tunnel/peerauto"
 	"github.com/backpack/backpack/internal/utils/network"
 )
 
@@ -63,6 +64,9 @@ func List() []Tunnel {
 		default:
 			continue
 		}
+		if cfg.Auto.Enabled {
+			t.Transport = "auto"
+		}
 		tunnels = append(tunnels, t)
 	}
 	sort.Slice(tunnels, func(i, j int) bool { return tunnels[i].Name < tunnels[j].Name })
@@ -99,6 +103,9 @@ func Delete(name string) error {
 	}
 	if cfgErr == nil {
 		network.CleanupPckGuards(cfg.Server.Token, cfg.Client.Token, cfg.Direct.Token, cfg.L3.Token)
+	}
+	if err := peerauto.RemoveStoppedState(app.ConfigPath(name) + ".auto-state.json"); err != nil {
+		return err
 	}
 	removeUnit(name)
 	removeScheduledRestart(name)

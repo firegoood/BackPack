@@ -245,7 +245,7 @@ func (s *server) nodeAdd(w http.ResponseWriter, r *http.Request) {
 	name := strings.TrimSpace(r.FormValue("name"))
 
 	// The decision is control.Fleet.Join's — reach the machine now, install
-	// Backpack if it has none, take the entry back out if it cannot be
+	// FullPack if it has none, take the entry back out if it cannot be
 	// reached. None of that is about HTTP, and having it here was why a CLI
 	// that wanted to add a server had to drive the panel. See
 	// internal/control/join.go.
@@ -301,7 +301,7 @@ func (s *server) nodeCredentials(w http.ResponseWriter, r *http.Request) {
 // nodeUpgrade serves the "upgrade" action.
 //
 // One click, from here, for a server the operator may never log into.
-// It is the same installer that put Backpack there: it fetches the
+// It is the same installer that put FullPack there: it fetches the
 // current release, replaces the binary and restarts what was running.
 func (s *server) nodeUpgrade(w http.ResponseWriter, r *http.Request) {
 	run := s.nodes.Runner()
@@ -674,12 +674,12 @@ func (s *server) handleNodePair(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, resp)
 }
 
-// peerConnOnNode reads back the far end's own connectivity answers.
+// peerSettingsOnNode reads back the far end's own connectivity/helper answers.
 //
 // A node that cannot be reached, or has no such tunnel yet, returns nothing:
 // this is a carry-forward, so having nothing to carry is an ordinary answer and
 // not a reason to fail an edit that is otherwise fine.
-func peerConnOnNode(run node.Runner, nodeName, tunnel string) *manage.ConnTune {
+func peerSettingsOnNode(run node.Runner, nodeName, tunnel string) *manage.TunnelSettings {
 	if run == nil {
 		return nil
 	}
@@ -687,13 +687,31 @@ func peerConnOnNode(run node.Runner, nodeName, tunnel string) *manage.ConnTune {
 	if err := run.Call(nodeName, node.OpSettings, node.NameRequest{Name: tunnel}, &cur); err != nil {
 		return nil
 	}
-	conn := cur.Conn
-	return &conn
+	return &cur
+}
+
+// The client helper executable and loopback listener belong to the node.
+// Peer credentials/trust and the public endpoint still come from the server.
+func carryPeerManaged(t *manage.NewTunnel, current *manage.TunnelSettings) {
+	if t.Managed == nil || current == nil || current.Managed == nil || current.Role != "client" {
+		return
+	}
+	sameHelper := t.Transport == current.Transport ||
+		(t.Transport == "xhttp" || t.Transport == "reality") &&
+			(current.Transport == "xhttp" || current.Transport == "reality")
+	if sameHelper {
+		t.Managed.Binary = current.Managed.Binary
+		t.Managed.InternalPort = current.Managed.InternalPort
+	}
 }
 
 // pushPeerEnd mirrors a freshly created tunnel and applies it on the node.
 func (s *server) pushPeerEnd(run node.Runner, nodeName, tunnel string, peerConn *manage.ConnTune, r *http.Request) (any, error) {
-	link, err := manage.ShareLinkFor(tunnel, panelHost(r))
+	host := panelHost(r)
+	if settings, err := manage.TunnelSettingsOf(tunnel); err == nil && settings.Transport == "naive" && settings.Managed != nil && settings.Managed.ServerName != "" {
+		host = settings.Managed.ServerName
+	}
+	link, err := manage.ShareLinkFor(tunnel, host)
 	if err != nil {
 		return nil, fmt.Errorf("could not read back the tunnel just created: %w", err)
 	}
@@ -711,11 +729,15 @@ func (s *server) pushPeerEnd(run node.Runner, nodeName, tunnel string, peerConn 
 		t := form.ToNewTunnel()
 		// Laid over the mirror, not merged into it: these are the far end's own
 		// answers and nothing on this side has an opinion to defend.
-		if peerConn == nil {
+		var current *manage.TunnelSettings
+		if peerConn == nil || t.Managed != nil {
+			current = peerSettingsOnNode(run, nodeName, form.Name)
+		}
+		if peerConn == nil && current != nil {
 			// An edit sends none, because an edit is about this end. Carrying
 			// the far end's current ones across keeps a rebuild from dropping
 			// settings the operator gave when the tunnel was paired.
-			peerConn = peerConnOnNode(run, nodeName, form.Name)
+			peerConn = &current.Conn
 		}
 		// Simple auth is paired, not the far end's own answer: it has to match
 		// this end, whatever the far end's drawer said.
@@ -727,7 +749,12 @@ func (s *server) pushPeerEnd(run node.Runner, nodeName, tunnel string, peerConn 
 			c.SimpleAuth = true
 			peerConn = &c
 		}
-		t.Conn = peerConn
+		if t.Managed == nil {
+			t.Conn = peerConn
+		} else {
+			// Managed HTTPS retires incompatible routing/proxy/simple-auth settings.
+			carryPeerManaged(&t, current)
+		}
 		req.Tunnel = &t
 	}
 	var res node.ApplyResult

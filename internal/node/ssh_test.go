@@ -41,30 +41,30 @@ type fakeServer struct {
 	old     bool   // the binary is there and predates "node exec"
 	argOnly bool   // "node exec" is there but reads its request only as an argument
 	refuse  string // the far side answers, and says no
-	binary  string // run this Backpack build for real instead of answering; see farside_test.go
+	binary  string // run this FullPack build for real instead of answering; see farside_test.go
 }
 
-// oldNodeUsage is verbatim what Backpack v1.7.6 and earlier print when asked to
+// oldNodeUsage is verbatim what FullPack v1.7.6 and earlier print when asked to
 // run a subcommand they do not have. It is reproduced here rather than
 // summarised because the point of the test is that this exact output — a whole
 // screen of another machine's help, on stderr, with a non-zero exit — is what a
 // panel meets when it reaches a server that has not been upgraded yet.
 const oldNodeUsage = `unknown command "exec"
 
-backpack node — connect this server to a Backpack panel
+fullpack node — connect this server to a FullPack panel
 
-  backpack node setup --panel <host:port> --key <setup-key>
+  fullpack node setup --panel <host:port> --key <setup-key>
         Register this server with a panel and start the agent.
         The panel shows this line ready to paste, on Nodes → Add server.
 
-  backpack node status
+  fullpack node status
         Show whether this server is managed, and by which panel.
 
-  backpack node run
+  fullpack node run
         Run the agent in the foreground. This is what the service executes;
         there is no reason to run it by hand.
 
-  backpack node remove
+  fullpack node remove
         Stop being managed. Tunnels already on this server keep running.
 `
 
@@ -167,7 +167,7 @@ func (s *fakeServer) handle(c net.Conn, cfg *ssh.ServerConfig) {
 				}
 
 				if failing {
-					fmt.Fprintln(ch.Stderr(), "sh: backpack: command not found")
+					fmt.Fprintln(ch.Stderr(), "sh: fullpack: command not found")
 					ch.SendRequest("exit-status", false, ssh.Marshal(struct{ S uint32 }{127}))
 					return
 				}
@@ -193,7 +193,7 @@ func (s *fakeServer) handle(c net.Conn, cfg *ssh.ServerConfig) {
 	}
 }
 
-// answerTo does what `backpack node exec` does on the far machine, except that
+// answerTo does what `fullpack node exec` does on the far machine, except that
 // it echoes the request back instead of performing it — so a test can see
 // exactly what arrived.
 func answerTo(cmd string) string {
@@ -335,7 +335,7 @@ func TestABannerDoesNotBreakTheAnswer(t *testing.T) {
 	}
 }
 
-// A server with no Backpack on it is a thing to install, not a mystery.
+// A server with no FullPack on it is a thing to install, not a mystery.
 func TestAMissingBinaryIsNamed(t *testing.T) {
 	isolateStore(t)
 	srv := newFakeServer(t, "root", "hunter2")
@@ -347,7 +347,7 @@ func TestAMissingBinaryIsNamed(t *testing.T) {
 	defer r.Close()
 	err := r.Call("kharej", OpHello, nil, nil)
 	if err == nil {
-		t.Fatal("a server with no Backpack answered successfully")
+		t.Fatal("a server with no FullPack answered successfully")
 	}
 	if !errors.Is(err, ErrNeedsInstall) {
 		t.Errorf("the operator is not told what to do about it: %v", err)
@@ -487,13 +487,13 @@ func TestARefusalFromTheFarSideArrivesAsItself(t *testing.T) {
 
 func TestMain(m *testing.M) { os.Exit(m.Run()) }
 
-// A server running an older Backpack has to be recognised as one.
+// A server running an older FullPack has to be recognised as one.
 //
 // This is the bug report "adding a server says I have to make it a node like
-// before". The panel reaches a new server by running `backpack node exec` on
-// it over SSH. A server that has never had Backpack answers "command not
+// before". The panel reaches a new server by running `fullpack node exec` on
+// it over SSH. A server that has never had FullPack answers "command not
 // found", which the panel understands and fixes by installing. A server that
-// has Backpack v1.7.6 on it answers something else entirely: the binary is
+// has FullPack v1.7.6 on it answers something else entirely: the binary is
 // there, it runs, and it rejects the subcommand — printing a screen of its own
 // help to stderr and exiting 2.
 //
@@ -501,7 +501,7 @@ func TestMain(m *testing.M) { os.Exit(m.Run()) }
 // the day the panel is upgraded. It was treated as a hard error: the add was
 // refused, the server was taken back out, and the operator was shown the far
 // machine's help text for a command that no longer exists, telling them to go
-// and run `backpack node setup` — the very flow this release removed.
+// and run `fullpack node setup` — the very flow this release removed.
 func TestAnOlderBackpackIsRecognisedAsOneToUpgrade(t *testing.T) {
 	isolateStore(t)
 	srv := newFakeServer(t, "root", "hunter2")
@@ -513,13 +513,13 @@ func TestAnOlderBackpackIsRecognisedAsOneToUpgrade(t *testing.T) {
 	defer r.Close()
 	err := r.Call("kharej", OpHello, nil, nil)
 	if err == nil {
-		t.Fatal("a server running an older Backpack answered successfully")
+		t.Fatal("a server running an older FullPack answered successfully")
 	}
 
 	// The same condition the missing case raises, because the panel does the
 	// same thing about both: it installs, which is also how it upgrades.
 	if !errors.Is(err, ErrNeedsInstall) {
-		t.Errorf("an out-of-date Backpack is not recognised as one to install over, "+
+		t.Errorf("an out-of-date FullPack is not recognised as one to install over, "+
 			"so this server is refused instead of upgraded.\ngot: %v", err)
 	}
 }
@@ -541,7 +541,7 @@ func TestTheFarMachinesHelpTextIsNotShownToTheOperator(t *testing.T) {
 	defer r.Close()
 	err := r.Call("kharej", OpHello, nil, nil)
 	if err == nil {
-		t.Fatal("a server running an older Backpack answered successfully")
+		t.Fatal("a server running an older FullPack answered successfully")
 	}
 	said := err.Error()
 

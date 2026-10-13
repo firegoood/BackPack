@@ -2,9 +2,11 @@ package enginectl
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -35,19 +37,27 @@ func serveTest(t *testing.T, h Handler) string {
 	t.Cleanup(func() { Dir = prev })
 
 	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-
 	ready := make(chan error, 1)
 	go func() { ready <- Serve(ctx, "fr-relay", h) }()
+	t.Cleanup(func() {
+		cancel()
+		select {
+		case <-ready:
+		case <-time.After(5 * time.Second):
+			t.Error("the control server did not stop before fixture cleanup")
+		}
+	})
 
-	// Serve blocks in Accept, so its readiness is the socket existing.
+	// The filesystem entry can appear between bind and listen. Readiness
+	// requires an actual request/response, as it does for an operator.
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
-		if _, err := os.Stat(SocketPath("fr-relay")); err == nil {
+		if err := Ask("fr-relay", OpPing, nil); err == nil {
 			return "fr-relay"
 		}
 		select {
 		case err := <-ready:
+			ready <- err // cleanup still joins the server's completed run
 			t.Fatalf("the socket never came up: %v", err)
 		default:
 		}
@@ -62,6 +72,7 @@ func TestTheEngineAnswersWhatItIsDoing(t *testing.T) {
 		Name: "fr-relay", Role: "server", Transport: "wss",
 		Connected: true, Peer: "203.0.113.9:51234",
 		BytesIn: 1400, BytesOut: 2800, Generation: 3,
+		Diagnostics: json.RawMessage(`{"transport_detail":{"streams":3}}`),
 	}}
 	name := serveTest(t, eng)
 
@@ -69,7 +80,7 @@ func TestTheEngineAnswersWhatItIsDoing(t *testing.T) {
 	if err := Ask(name, OpStatus, &got); err != nil {
 		t.Fatalf("asking for status: %v", err)
 	}
-	if got != eng.status {
+	if !reflect.DeepEqual(got, eng.status) {
 		t.Fatalf("status came back as %+v, want %+v", got, eng.status)
 	}
 }
@@ -158,7 +169,7 @@ func TestTheSocketIsNotReadableByAnybodyElse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stat dir: %v", err)
 	}
-	// The directory is the test's TempDir here rather than /run/backpack, so
+	// The directory is the test's TempDir here rather than /run/fullpack, so
 	// what is checked is that it is not world-anything — the mode Serve asks
 	// for when it makes the directory itself is 0700.
 	if dir.Mode().Perm()&0o007 != 0 {

@@ -7,14 +7,14 @@ import (
 )
 
 // Reported against v1.8.4: "I turn the web panel off by hand, and every time I
-// run the script with sudo backpack it turns itself back on." The menu started
+// run the script with sudo fullpack it turns itself back on." The menu started
 // the panel on every run, and a stop left nothing behind to say it was meant.
 
 // fakePanelUnit points the unit file at a temporary directory and records the
 // starts instead of making them. It returns the number of starts so far.
 func fakePanelUnit(t *testing.T) *int {
 	t.Helper()
-	unit := filepath.Join(t.TempDir(), "backpack-webui.service")
+	unit := filepath.Join(t.TempDir(), "fullpack-webui.service")
 	prevPath, prevStart, prevRemove := panelUnitPath, installAndStart, removeUnit
 	starts := 0
 	panelUnitPath = func() string { return unit }
@@ -40,7 +40,7 @@ func TestAPanelTheOperatorStoppedStaysStoppedWhenTheMenuOpens(t *testing.T) {
 	if err := Disable(); err != nil {
 		t.Fatal(err)
 	}
-	for i := 0; i < 3; i++ { // three more runs of `sudo backpack`
+	for i := 0; i < 3; i++ { // three more runs of `sudo fullpack`
 		if _, started, err := StartUnlessStopped(); err != nil || started {
 			t.Fatalf("run %d started a panel the operator had stopped (err %v)", i+1, err)
 		}

@@ -267,7 +267,7 @@ func TestXrayLoadEditPreservesSettingsAndRejectsBypass(t *testing.T) {
 					}
 					cert := stream["tlsSettings"].(map[string]any)["certificates"].([]any)[0].(map[string]any)
 					if cert["oneTimeLoading"] != true {
-						t.Fatal("Xray must not reload a certificate rejected by BackPack")
+						t.Fatal("Xray must not reload a certificate rejected by FullPack")
 					}
 					if cert["certificateFile"] != nil || cert["keyFile"] != nil {
 						t.Fatal("Xray must not reread mutable TLS paths after validation")

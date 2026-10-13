@@ -3,7 +3,7 @@
 
     python3 internal/webui/assets/icons/generate.py internal/webui/assets/icons
 
-Rasterises the panel's backpack mark to PNG.
+Rasterises the panel's fullpack mark to PNG.
 
 The mark already exists as an SVG (internal/webui/handlers_app.go) and that is
 what desktop browsers use. iOS ignores SVG for a home-screen icon, and Android's

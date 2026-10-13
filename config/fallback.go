@@ -35,7 +35,8 @@ var fallbackCapable = map[TransportType]bool{
 // reverseTransports are the transports the reverse engine runs. spoof is not
 // one: it is refused by name elsewhere, with what to build instead.
 var reverseTransports = map[TransportType]bool{
-	TCP: true, TCPMUX: true, STEALTH: true,
+	WATICMP: true,
+	TCP:     true, TCPMUX: true, STEALTH: true,
 	WS: true, WSS: true, WSMUX: true, WSSMUX: true,
 	KCP: true, QUIC: true, UDP: true, XDI: true, PCK: true,
 }

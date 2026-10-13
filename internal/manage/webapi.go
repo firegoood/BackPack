@@ -3,6 +3,7 @@ package manage
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/backpack/backpack/config"
 	"math/rand"
 	"net"
 	"reflect"
@@ -36,11 +37,11 @@ type TransportFamily struct {
 	Entries []TransportOption `json:"entries"`
 }
 
-// TransportFamilies returns the ordinary engine transport menu. Managed HTTPS
-// selections require the terminal's role-specific credential and TLS wizard.
+// TransportFamilies serves the complete CLI menu, including HTTPS wrappers.
 func TransportFamilies() []TransportFamily {
-	out := make([]TransportFamily, 0, len(transportGroups))
-	for _, g := range transportGroups {
+	groups := cliTransportGroups()
+	out := make([]TransportFamily, 0, len(groups))
+	for _, g := range groups {
 		f := TransportFamily{Label: g.label, Desc: g.desc}
 		for _, e := range g.entries {
 			if e.value == "" {
@@ -352,14 +353,16 @@ func PresetTune(preset, role, transport string) FineTune {
 // collects it. It is the form's shape, not the config's: Ports and IPv6 are
 // server-only, ServerAddr is client-only, and the rest is common.
 type NewTunnel struct {
-	Role       string `json:"role"` // "server" (Iran) or "client" (kharej)
-	Transport  string `json:"transport"`
-	Name       string `json:"name"`
-	TunnelPort string `json:"tunnelPort"` // server: bind port — client: the server's port
-	ServerAddr string `json:"serverAddr"` // client only: IP or domain of the server
-	Token      string `json:"token"`
-	Ports      string `json:"ports"` // server only: comma-separated forwarded ports
-	Preset     string `json:"preset"`
+	WatICMP    *config.WatICMPConfig `json:"waticmp"`
+	Auto       *config.AutoConfig    `json:"auto"`
+	Role       string                `json:"role"` // "server" (Iran) or "client" (kharej)
+	Transport  string                `json:"transport"`
+	Name       string                `json:"name"`
+	TunnelPort string                `json:"tunnelPort"` // server: bind port — client: the server's port
+	ServerAddr string                `json:"serverAddr"` // client only: IP or domain of the server
+	Token      string                `json:"token"`
+	Ports      string                `json:"ports"` // server only: comma-separated forwarded ports
+	Preset     string                `json:"preset"`
 
 	IPv6          bool `json:"ipv6"`          // server only: bind :: instead of 0.0.0.0
 	ProxyProtocol bool `json:"proxyProtocol"` // server only
@@ -371,9 +374,10 @@ type NewTunnel struct {
 	// The advanced drawers, each nil unless it was opened. Pck only means
 	// anything on its own transport; Conn carries the connectivity options the
 	// wizard asks the client for; Limits caps the tunnel as a whole.
-	Pck    *PckTune      `json:"pck"`
-	Conn   *ConnTune     `json:"conn"`
-	Limits *TunnelLimits `json:"limits"`
+	Pck     *PckTune      `json:"pck"`
+	Conn    *ConnTune     `json:"conn"`
+	Limits  *TunnelLimits `json:"limits"`
+	Managed *ManagedHTTPS `json:"managed"`
 }
 
 // CreateTunnel builds a tunnel from a filled form and starts it. It returns the
@@ -438,9 +442,18 @@ func refuseBusyForwards(s TunnelSpec) error {
 	if s.Role != "server" {
 		return nil
 	}
-	if busy := reverseBusyPorts(s.Ports, s.BindAddr, s.Transport); len(busy) > 0 {
-		return fmt.Errorf("already in use on this server: %s — the tunnel port or the web "+
-			"panel's own port is the usual one; pick other ports", strings.Join(busy, ", "))
+	addresses := []string{s.BindAddr}
+	if managedTransport(selectedTransport(s)) {
+		addresses = append(addresses, managedEndpoint(s))
+	}
+	for _, addr := range addresses {
+		if busy := reverseBusyPorts(s.Ports, addr, s.Transport); len(busy) > 0 {
+			return fmt.Errorf("already in use on this server: %s — the tunnel port or the web "+
+				"panel's own port is the usual one; pick other ports", strings.Join(busy, ", "))
+		}
+		if managedTransport(selectedTransport(s)) && portHeld(addr) {
+			return fmt.Errorf("HTTPS listener already in use: %s", addr)
+		}
 	}
 	return nil
 }
@@ -448,6 +461,10 @@ func refuseBusyForwards(s TunnelSpec) error {
 // specFromNew turns a filled setup form into the configuration it describes.
 // It writes nothing.
 func specFromNew(n NewTunnel) (TunnelSpec, error) {
+	n.Transport = strings.ToLower(strings.TrimSpace(n.Transport))
+	if n.Transport == "waticmp" || n.Transport == "auto" {
+		return specFromPeerNew(n)
+	}
 	// Forwarded ports carry TCP only unless the Fine Tune drawer turns UDP on,
 	// which is what the CLI wizard defaults to too. See ForwardsUDP for why the
 	// default is off.
@@ -461,6 +478,12 @@ func specFromNew(n NewTunnel) (TunnelSpec, error) {
 	}
 
 	s.Transport = strings.ToLower(strings.TrimSpace(n.Transport))
+	chosenTransport := s.Transport
+	if managedTransport(chosenTransport) {
+		s.Transport = "tcp"
+	} else if n.Managed != nil {
+		return s, fmt.Errorf("HTTPS settings require naive, xhttp or reality")
+	}
 	if !validTransport(s.Transport) {
 		return s, fmt.Errorf("unknown transport %q", n.Transport)
 	}
@@ -562,6 +585,19 @@ func specFromNew(n NewTunnel) (TunnelSpec, error) {
 	if err := applyAdvanced(&s, n.Pck, n.Conn, n.Limits, port); err != nil {
 		return s, err
 	}
+	if managedTransport(chosenTransport) {
+		public := s.BindAddr
+		if s.Role == "client" {
+			public = s.RemoteAddr
+		}
+		m := ManagedHTTPS{}
+		if n.Managed != nil {
+			m = *n.Managed
+		}
+		if err := applyManagedHTTPS(&s, chosenTransport, public, m); err != nil {
+			return s, err
+		}
+	}
 	optimize.ApplyQuiet(ReservedPorts())
 	return s, nil
 }
@@ -569,12 +605,15 @@ func specFromNew(n NewTunnel) (TunnelSpec, error) {
 // TunnelEdit is the set of changes the panel's Edit form can make. Every field
 // is optional: an empty one leaves that setting exactly as it is.
 type TunnelEdit struct {
-	ServerAddr string    `json:"serverAddr"` // client only
-	TunnelPort string    `json:"tunnelPort"`
-	Ports      string    `json:"ports"` // server only, comma-separated
-	Transport  string    `json:"transport"`
-	Preset     string    `json:"preset"`
-	Tune       *FineTune `json:"tune"`
+	WatICMP    *config.WatICMPConfig `json:"waticmp"`
+	Auto       *config.AutoConfig    `json:"auto"`
+	Managed    *ManagedHTTPS         `json:"managed"`
+	ServerAddr string                `json:"serverAddr"` // client only
+	TunnelPort string                `json:"tunnelPort"`
+	Ports      string                `json:"ports"` // server only, comma-separated
+	Transport  string                `json:"transport"`
+	Preset     string                `json:"preset"`
+	Tune       *FineTune             `json:"tune"`
 
 	// The advanced drawers, nil unless the form opened one. They are the same
 	// blocks the setup form fills, so a setting can be changed afterwards
@@ -606,32 +645,9 @@ func EditTunnelSettings(name string, e TunnelEdit) error {
 	if err != nil {
 		return err
 	}
-	// What the form was filled with, so only what the operator changed on it
-	// is applied. See changedFrom.
-	shown := tuneOf(s)
-
-	// In this order, which is load-bearing: the transport first, because it
-	// decides what the rest may be; the preset before the manual knobs, so a
-	// form that changes both ends up with the preset as the baseline and the
-	// edits on top — the order the CLI uses; and the advanced drawers after the
-	// port has settled, so a backup address written without one inherits the
-	// port the tunnel is being left on.
-	changed := false
-	for _, step := range []func(*TunnelSpec) (bool, error){
-		e.editTransport,
-		func(s *TunnelSpec) (bool, error) { return e.editTuning(s, shown) },
-		e.editCertificate,
-		e.editTunnelPort,
-		e.editServerAddr,
-		e.editPorts,
-		e.editAdvanced,
-		e.editProxyProtocol,
-	} {
-		c, err := step(&s)
-		if err != nil {
-			return err
-		}
-		changed = changed || c
+	s, changed, err := editedReverseSpec(s, e)
+	if err != nil {
+		return err
 	}
 	if !changed {
 		return fmt.Errorf("nothing to change")
@@ -853,11 +869,14 @@ func (e TunnelEdit) editProxyProtocol(s *TunnelSpec) (bool, error) {
 // TunnelSettings is a tunnel's current editable state, for filling the panel's
 // Edit form.
 type TunnelSettings struct {
-	Name       string `json:"name"`
-	Role       string `json:"role"`
-	Transport  string `json:"transport"`
-	ServerHost string `json:"serverHost"` // client only
-	TunnelPort string `json:"tunnelPort"`
+	WatICMP    config.WatICMPConfig `json:"waticmp"`
+	Auto       config.AutoConfig    `json:"auto"`
+	Managed    *ManagedHTTPS        `json:"managed,omitempty"`
+	Name       string               `json:"name"`
+	Role       string               `json:"role"`
+	Transport  string               `json:"transport"`
+	ServerHost string               `json:"serverHost"` // client only
+	TunnelPort string               `json:"tunnelPort"`
 
 	// BindHost is the one address a server tunnel's control port is pinned to,
 	// or "" when it listens on every interface.
@@ -896,10 +915,15 @@ func TunnelSettingsOf(name string) (TunnelSettings, error) {
 	if err != nil {
 		return TunnelSettings{}, err
 	}
+	return tunnelSettingsFrom(s), nil
+}
+
+func tunnelSettingsFrom(s TunnelSpec) TunnelSettings {
 	out := TunnelSettings{
+		WatICMP: s.WatICMP, Auto: s.Auto,
 		Name:          s.Name,
 		Role:          s.Role,
-		Transport:     s.Transport,
+		Transport:     selectedTransport(s),
 		Preset:        s.Preset,
 		PresetName:    presetLabel(s.Preset),
 		Tune:          tuneOf(s),
@@ -918,7 +942,19 @@ func TunnelSettingsOf(name string) (TunnelSettings, error) {
 		out.TunnelPort = addrPort(s.RemoteAddr)
 		out.ServerHost = addrHost(s.RemoteAddr, "")
 	}
-	return out, nil
+	if managedTransport(out.Transport) {
+		m := managedHTTPSOf(s)
+		m.Password, m.PrivateKey = "", ""
+		out.Managed = &m
+		public := managedEndpoint(s)
+		out.TunnelPort = addrPort(public)
+		if s.Role == "server" {
+			out.BindHost = bindHostOf(public)
+		} else {
+			out.ServerHost = addrHost(public, "")
+		}
+	}
+	return out
 }
 
 // Start, Stop and Restart drive one tunnel's service by tunnel name, so a

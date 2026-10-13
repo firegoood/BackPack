@@ -232,7 +232,7 @@ func TestAnUpdateReopensTheMenuOnTheNewBinary(t *testing.T) {
 	}
 
 	execSelf = func() error { return errors.New("permission denied") }
-	if out := drive(t, "\n", reopen); !strings.Contains(out, "Run sudo backpack Again") {
+	if out := drive(t, "\n", reopen); !strings.Contains(out, "Run sudo fullpack Again") {
 		t.Fatalf("a failed reopen does not say what to do:\n%s", out)
 	}
 

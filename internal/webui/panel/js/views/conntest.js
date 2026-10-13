@@ -102,6 +102,7 @@ function startPane(v) {
         removed when it ends — nothing is left behind on either server.</span></div>
     <label class="tl-f ct-field"><span>This server's address</span>
       <input id="ctHost" type="text" value="${esc(host)}" placeholder="the IP the kharej dials" autocomplete="off" spellcheck="false"></label>
+    <label class="tl-f ct-field"><span>Kharej IPv4 for Wat ICMP (optional)</span><input id="ctWatPeer" type="text" placeholder="Explicit peer IPv4; blank skips normal/reverse Wat tests" autocomplete="off" spellcheck="false"></label>
     <div class="tl-f ct-field"><span>Preset</span>
       <div class="tl-seg" id="ctPreset">${PRESETS.map(p =>
         `<button type="button" data-p="${p.v}" class="${p.v === preset ? 'on' : ''}">
@@ -124,7 +125,7 @@ function waitPane(v) {
         <button class="tl-btn" data-copy="#ctCmd">${ICON.copy}<span>Copy</span></button>
       </div>
       <details class="ct-more">
-        <summary>${ICON.down}The kharej has no Backpack yet</summary>
+        <summary>${ICON.down}The kharej has no FullPack yet</summary>
         <p>This installs it and runs the test in one go. Nothing stays installed as a tunnel.</p>
         <div class="ct-cmd sm"><code id="ctInst">${esc(v.install || '')}</code>
           <button class="tl-btn" data-copy="#ctInst">${ICON.copy}<span>Copy</span></button></div>
@@ -459,7 +460,7 @@ export function connTestView(ctx) {
       b.innerHTML = `${ICON.play}Starting…`;
       try {
         fresh = false;
-        paint(await api.connTestStart({ host, preset }));
+        paint(await api.connTestStart({ host, preset, watPeerIpv4: $('#ctWatPeer', view)?.value.trim() || '' }));
         schedule();
       } catch (e) { oops(e); b.disabled = false; b.innerHTML = `${ICON.play}Start the test`; }
       return;

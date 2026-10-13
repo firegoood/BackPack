@@ -11,6 +11,8 @@
 import { $$, el, esc, dialogSubtitle } from '../lib/dom.js';
 import { isUp } from '../lib/tstate.js';
 import { NUMERIC } from '../lib/numeric.js';
+import { isManaged, shapeManaged } from '../ui/managed.js';
+import { resetPeerSetup, shapePeerSetup, peerSetupPayload, peerSetupHost } from '../ui/peerauto.js';
 import * as api from '../api.js';
 import { setupLinkHTML, bindSetupLink } from '../ui/setuplink.js';
 import * as store from '../store.js';
@@ -94,6 +96,7 @@ export function addView(ctx) {
       const drawer = id => root.querySelector('#dw-' + id);
 
       function applyFields() {
+        resetPeerSetup(root);
         const t = chosen.transport || '';
         const on = (sel, yes) => root.querySelectorAll(sel).forEach(n => {
           const row = n.closest('.f3, .tg3, .fhead') || n;
@@ -102,6 +105,8 @@ export function addView(ctx) {
         on('[name^="tune.mux"]', isMux(t));
         on('[name^="tune.kcp"]', isKCP(t));
         on('[data-when="tls"]', needsTLS(t));
+        on('[name="tune.acceptUDP"]', chosen.side === 'server' && !isManaged(t));
+        on('[name="tune.zeroCopy"]', t === 'tcp' || isManaged(t));
 
         /* The packet-carrier drawer only means anything on its own transport —
            on plain TCP it was offering settings nothing reads. The spoof drawer
@@ -121,7 +126,11 @@ export function addView(ctx) {
          *
          * ConnTune.apply is the authority for both of these. */
         on('[name="peerConn.edgeIP"]', isWS(t));
-        on('[name="peerConn.proxy"]', !isDatagram(t));
+        on('[name="peerConn.proxy"]', !isDatagram(t) && !isManaged(t));
+        const cn = drawer('cn');
+        if (cn) cn.hidden = isManaged(t);
+        shapeManaged(root, t, chosen.side, chosen.direction === 'direct');
+        shapePeerSetup(root, t, chosen.side, chosen.direction === 'direct');
       }
 
       /* Throughput is offered only where it applies — presetSuitsTransport. */
@@ -129,7 +138,7 @@ export function addView(ctx) {
         const t = chosen.transport || '';
         root.querySelectorAll('.rp').forEach(b => {
           const key = b.querySelector('.key2')?.textContent.trim();
-          const hide = key === 'throughput' && t !== 'kcp';
+          const hide = ['auto', 'waticmp'].includes(t) || key === 'throughput' && t !== 'kcp';
           b.hidden = hide;
           if (hide && b.classList.contains('on')) {
             b.classList.remove('on');
@@ -409,6 +418,16 @@ export function addView(ctx) {
         const direct = chosen.direction === 'direct';
         show('.step3rev', !direct);
         show('.step3direct', direct);
+        const directionNote = root.querySelector('#dirnote');
+        if (directionNote) directionNote.textContent = direct
+          ? 'Direct — this server dials the kharej over the selected carrier.'
+          : ['waticmp', 'auto'].includes(chosen.transport)
+            ? 'Reverse forwarding — users enter Iran. Approved carrier endpoints and ICMP packet direction are configured below.'
+          : 'Reverse — the kharej server dials in to this server.';
+        root.querySelector('[data-name="stealth"]')?.closest('.tg3')
+          ?.toggleAttribute('hidden', !direct || chosen.carrier !== 'spoof');
+        root.querySelector('[name="paths"]')?.closest('.f3')
+          ?.toggleAttribute('hidden', !direct || chosen.carrier !== 'udp');
         if (direct) suggestDirect(chosen.side);
 
         /* "server" is the Iran side, "client" the kharej side — the words the
@@ -466,6 +485,8 @@ export function addView(ctx) {
            form sent no preset and the server took its default: Turbo, under a
            row showing Balance. */
         else chosen.preset = markedPreset();
+        shapeManaged(root, chosen.transport, chosen.side, direct);
+        if (root.dataset.staged) { paintRail(); paintNav(lastStep); }
       }
 
       /* The last step is not a summary.
@@ -567,11 +588,21 @@ export function addView(ctx) {
         if (title) title.textContent = up ? 'Built on this server' : 'Created, not up yet';
         if (sub) sub.textContent = up ? 'Now build the other end with the line below.'
           : 'The config is written but the service did not start — its log says why.';
+        if (chosen.side === 'client' && ['waticmp', 'auto'].includes(chosen.transport)) {
+          if (sub && up) sub.textContent = 'The enrolled Kharej service is running. Inspect tunnel status for connectivity.';
+          if (result) result.innerHTML = `<div class="doneline"><span class="tick">${up ? '✓' : '!'}</span><div>
+            <b>Iran enrollment imported</b><span>This peer uses the trusted manifest you supplied. Keep its setup link private.</span>
+          </div></div>`;
+          building = false;
+          return;
+        }
         if (result) {
           result.innerHTML = `<div class="sl-wait">Building the setup link…</div>`;
           bindSetupLink(result);
           try {
-            result.innerHTML = setupLinkHTML(await api.tunnelLink(name));
+            const host = chosen.transport === 'naive'
+              ? root.querySelector('[name="managed.serverName"]')?.value.trim() || '' : chosen.transport === 'waticmp' ? peerSetupHost(root) : '';
+            result.innerHTML = setupLinkHTML(await api.tunnelLink(name, host));
           } catch (e) {
             result.innerHTML = `<div class="doneline warn"><span class="tick">!</span><div>
               <b>${esc(e.message)}</b><span>Open the tunnel's menu → Setup link to try again.</span></div></div>`;
@@ -758,7 +789,7 @@ export function addView(ctx) {
         .filter(b => /show as a cli command/i.test(b.textContent.trim()))
         .forEach(b => b.addEventListener('click', async () => {
           const get = n => root.querySelector(`[name="${n}"], #${n}`)?.value?.trim() || '';
-          const line = ['sudo backpack',
+          const line = ['sudo fullpack',
             chosen.direction === 'direct' ? 'direct' : 'reverse',
             chosen.side === 'server' ? '--iran' : '--kharej',
             chosen.transport ? '--transport ' + chosen.transport : '',
@@ -836,16 +867,20 @@ export function addView(ctx) {
         const next = root.querySelector('#nextb');
         const note = root.querySelector('#note4');
         if (!next || !root.dataset.staged) return;
-        const last = root.querySelectorAll('.step[data-s]').length - 1;
+        const panes = paneList();
+        const last = panes.length - 1;
+        let upcoming = at + 1;
+        while (upcoming < last && paneEmpty(panes[upcoming], upcoming, panes.length)) upcoming++;
+        const buildsNext = upcoming === last;
         if (at === last) {
           next.textContent = 'Close';
           next.disabled = false;
           next.onclick = () => { close(); go('/'); };
         } else {
-          next.textContent = at === last - 1 ? 'Create the tunnel' : 'Continue';
+          next.textContent = buildsNext ? 'Create the tunnel' : 'Continue';
           next.onclick = null;
         }
-        if (note) note.textContent = at === last - 1
+        if (note) note.textContent = buildsNext
           ? 'This server’s end is written when you press this.' : '';
       }
 
@@ -946,7 +981,7 @@ export function addView(ctx) {
             <button type="button" class="ch4" data-kind="rev">
               <span class="ic4"><svg viewBox="0 0 24 24"><path d="M20 12H4"/><path d="M10 6l-6 6 6 6"/></svg></span>
               <b>Reverse<span class="rec">usual</span></b>
-              <i>The kharej dials in to this server. Ten transports, from plain TCP to WebSocket behind a CDN — what to try first.</i>
+              <i>The kharej dials in to this server. Choose TCP, UDP, WebSocket or a managed HTTPS transport.</i>
               <div class="diagram">🌍 kharej <b>→</b> 🇮🇷 Iran</div></button>
             <button type="button" class="ch4" data-kind="dir">
               <span class="ic4"><svg viewBox="0 0 24 24"><path d="M4 12h16"/><path d="M14 6l6 6-6 6"/></svg></span>
@@ -1074,9 +1109,11 @@ export function addView(ctx) {
         if (chosen.preset) payload.preset = chosen.preset;
 
         // Only this end: the other is built from its setup link.
+        const peer = peerSetupPayload(root, payload);
         const r = chosen.direction === 'direct'
           ? await api.directCreate(payload)
-          : await api.tunnelCreate(payload);
+          : peer.peerEnrollment !== undefined ? await api.peerEnrollment(peer.name, peer.transport, peer.peerEnrollment)
+          : await api.tunnelCreate(peer);
         return { r, name: payload.name };
       }
 

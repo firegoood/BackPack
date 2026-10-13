@@ -11,7 +11,7 @@ import (
 	"github.com/backpack/backpack/internal/node"
 )
 
-// `backpack node ...` — the managed side of the panel-to-server channel.
+// `fullpack node ...` — the managed side of the panel-to-server channel.
 //
 // There is almost nothing here, and that is the change.
 //
@@ -27,11 +27,11 @@ import (
 // far side needs no state at all, and what is left is the one command the panel
 // runs there.
 
-const nodeUsage = `backpack node — the panel-managed side of this server
+const nodeUsage = `fullpack node — the panel-managed side of this server
 
-  backpack node exec -
+  fullpack node exec -
         Read one request from stdin, perform it and print the answer. Both
-        are JSON, base64 encoded. This is what a Backpack panel runs over
+        are JSON, base64 encoded. This is what a FullPack panel runs over
         SSH; there is no reason to type it. (A request given as the argument
         instead of - is still read, for an older panel.)
 

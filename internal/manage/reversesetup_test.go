@@ -201,7 +201,7 @@ func TestManagedHTTPSClientWizardCanBeCancelledBeforeSaving(t *testing.T) {
 	if !strings.Contains(out, "Reverse XHTTP / TLS (Kharej)") || !strings.Contains(out, "127.0.0.1:8443") || strings.Contains(out, "Optional Connection Settings") || !strings.Contains(out, "How Do You Want To Set Up This Side?") {
 		t.Fatalf("incorrect managed wizard flow:\n%s", out)
 	}
-	if _, err := os.Stat("/etc/backpack/" + name + ".toml"); !os.IsNotExist(err) {
+	if _, err := os.Stat("/etc/fullpack/" + name + ".toml"); !os.IsNotExist(err) {
 		t.Fatal("cancelled wizard wrote a tunnel config")
 	}
 }
@@ -261,7 +261,7 @@ func TestTheReverseLinkBuildsTheMatchingKharej(t *testing.T) {
 			}
 			if needsTLS(tr) {
 				s.SimpleAuth = true
-				s.TLSCert, s.TLSKey = "/etc/backpack/c.pem", "/etc/backpack/k.pem"
+				s.TLSCert, s.TLSKey = "/etc/fullpack/c.pem", "/etc/fullpack/k.pem"
 			}
 
 			raw := pendingReverseLink(s, "203.0.113.9", linkExtras{})
@@ -321,8 +321,8 @@ func TestTheReverseSummaryIsShortAndCarriesTheLink(t *testing.T) {
 	for _, want := range []string{
 		"Reverse TCP", "0.0.0.0:443", "203.0.113.9:443", "443, 8080=2096  (TCP + UDP)",
 		"443 → 127.0.0.1:443", "8080 → 127.0.0.1:2096", "Turbo",
-		"Setup Link (sudo backpack → Setup Kharej → Reverse → Setup Link):",
-		"Install BackPack And Set Up This Tunnel (Kharej Without BackPack, As Root):",
+		"Setup Link (sudo fullpack → Setup Kharej → Reverse → Setup Link):",
+		"Install FullPack And Set Up This Tunnel (Kharej Without FullPack, As Root):",
 		"install.sh) link apply 'backpack://", link,
 	} {
 		if !strings.Contains(out, want) {
@@ -467,7 +467,7 @@ func TestSetupFromALinkKeepsThePairedReverseSettings(t *testing.T) {
 			}
 			if needsTLS(tr) {
 				srv.SimpleAuth = true
-				srv.TLSCert, srv.TLSKey = "/etc/backpack/c.pem", "/etc/backpack/k.pem"
+				srv.TLSCert, srv.TLSKey = "/etc/fullpack/c.pem", "/etc/fullpack/k.pem"
 			}
 			if tr == "kcp" {
 				srv.KCPDataShards, srv.KCPParityShards = 0, 0

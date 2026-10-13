@@ -10,10 +10,11 @@ import (
 // is exactly the drift this whole file exists to prevent.
 func TestTransportMenuIsTheCLIMenu(t *testing.T) {
 	families := TransportFamilies()
-	if len(families) != len(transportGroups) {
-		t.Fatalf("panel shows %d families, the CLI menu has %d", len(families), len(transportGroups))
+	groups := cliTransportGroups()
+	if len(families) != len(groups) {
+		t.Fatalf("panel shows %d families, the CLI menu has %d", len(families), len(groups))
 	}
-	for i, g := range transportGroups {
+	for i, g := range groups {
 		f := families[i]
 		if f.Label != g.label || f.Desc != g.desc {
 			t.Errorf("family %d: panel says %q/%q, the menu says %q/%q", i, f.Label, f.Desc, g.label, g.desc)
@@ -29,7 +30,9 @@ func TestTransportMenuIsTheCLIMenu(t *testing.T) {
 		var got []string
 		for _, e := range f.Entries {
 			got = append(got, e.Value)
-			if !validTransport(e.Value) {
+			// Auto is a validated configuration selector dispatched before the
+			// manual carrier factory; peer setup tests exercise that conversion.
+			if !validTransport(e.Value) && !managedTransport(e.Value) && e.Value != "auto" {
 				t.Errorf("the panel offers %q, which the engine does not support", e.Value)
 			}
 		}

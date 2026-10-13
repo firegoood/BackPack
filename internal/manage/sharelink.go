@@ -65,13 +65,16 @@ const (
 // ends disagreed about it? An interface name, a socket buffer or a tunnel's own
 // name would not, so they are not here and the receiving side keeps its own.
 type ShareLink struct {
-	V     int    `json:"v"`           // format version
-	Kind  string `json:"k"`           // "reverse" or "direct"
-	From  string `json:"f"`           // "iran" or "kharej" — the side that made it
-	Name  string `json:"n,omitempty"` // a suggestion, not a requirement
-	Tok   string `json:"t"`           // the shared secret
-	Tr    string `json:"tr"`          // reverse: transport. direct: carrier
-	Encap string `json:"e,omitempty"` // direct only
+	WatEnrollment  string `json:"wi,omitempty"`
+	AutoEnrollment string `json:"ap,omitempty"`
+	EnrollmentMAC  string `json:"em,omitempty"`
+	V              int    `json:"v"`           // format version
+	Kind           string `json:"k"`           // "reverse" or "direct"
+	From           string `json:"f"`           // "iran" or "kharej" — the side that made it
+	Name           string `json:"n,omitempty"` // a suggestion, not a requirement
+	Tok            string `json:"t"`           // the shared secret
+	Tr             string `json:"tr"`          // reverse: transport. direct: carrier
+	Encap          string `json:"e,omitempty"` // direct only
 	// SNI is the domain the sni carrier announces. Both ends should announce
 	// the same one — each is only telling the box in front of it what to
 	// think, but two different names on one tunnel is a thing to remember for
@@ -189,6 +192,9 @@ func (l ShareLink) Encode() (string, error) {
 			"link — retype it, or the other end would receive something different", field)
 	}
 	// Format 2: the same fields at half the length. See sharelinkv2.go.
+	if l.WatEnrollment != "" || l.AutoEnrollment != "" {
+		return encodePeerLink(l)
+	}
 	return encodeShareLinkV2(l)
 }
 
@@ -209,11 +215,11 @@ func DecodeShareLink(s string) (out ShareLink, err error) {
 		return out, fmt.Errorf("paste the setup link from the other server")
 	}
 	if !strings.HasPrefix(s, shareScheme) {
-		return out, fmt.Errorf("that does not look like a Backpack setup link — it should begin with %s", shareScheme)
+		return out, fmt.Errorf("that does not look like a FullPack setup link — it should begin with %s", shareScheme)
 	}
 	if strings.HasPrefix(s, connTestScheme) {
 		return out, fmt.Errorf("this is a connection-test link, not a setup link — on the kharej run " +
-			"sudo backpack → 0) Connection Test, or: backpack link apply '<the link>'")
+			"sudo fullpack → 0) Connection Test, or: fullpack link apply '<the link>'")
 	}
 	body := strings.TrimPrefix(s, shareScheme)
 	ver, payload, ok := strings.Cut(body, ".")
@@ -221,6 +227,8 @@ func DecodeShareLink(s string) (out ShareLink, err error) {
 		return out, fmt.Errorf("the setup link is incomplete — copy the whole of it, including the end")
 	}
 	switch ver {
+	case "3":
+		return decodePeerLink(payload)
 	case shareVersion2:
 		out, err := decodeShareLinkV2(payload)
 		if err != nil {
@@ -258,7 +266,7 @@ func DecodeShareLink(s string) (out ShareLink, err error) {
 	}
 	if json.Unmarshal(raw, &kind) == nil && kind.Kind == connTestKind {
 		return out, fmt.Errorf("this is a connection-test link, not a setup link — on the kharej run " +
-			"sudo backpack → 0) Connection Test, or: backpack link apply '<the link>'")
+			"sudo fullpack → 0) Connection Test, or: fullpack link apply '<the link>'")
 	}
 	if err := json.Unmarshal(raw, &out); err != nil {
 		return out, fmt.Errorf("the setup link is damaged — copy it again, all of it")
@@ -268,6 +276,11 @@ func DecodeShareLink(s string) (out ShareLink, err error) {
 
 // checkShareLink refuses a decoded link that cannot build anything.
 func checkShareLink(out ShareLink) error {
+	if out.WatEnrollment != "" || out.AutoEnrollment != "" {
+		if e := validatePeerLink(out); e != nil {
+			return e
+		}
+	}
 	if out.Tok == "" || out.Tr == "" {
 		return fmt.Errorf("the setup link is missing the token or the transport — it was not made by this version")
 	}
@@ -296,9 +309,11 @@ func (l ShareLink) PeerSide() string {
 // the same reason the mirroring does: two copies of it would eventually
 // disagree, and the disagreement would be invisible until a tunnel went quiet.
 type PeerForm struct {
-	Kind string `json:"kind"` // "reverse" or "direct"
-	Side string `json:"side"` // the side this form is for
-	Name string `json:"name,omitempty"`
+	WatICMP *config.WatICMPConfig `json:"waticmp,omitempty"`
+	Auto    *config.AutoConfig    `json:"auto,omitempty"`
+	Kind    string                `json:"kind"` // "reverse" or "direct"
+	Side    string                `json:"side"` // the side this form is for
+	Name    string                `json:"name,omitempty"`
 
 	Transport  string `json:"transport,omitempty"`  // reverse
 	Carrier    string `json:"carrier,omitempty"`    // direct
@@ -352,12 +367,18 @@ type PeerForm struct {
 // that made it — the kharej of a reverse tunnel, the Iran end of a direct one —
 // and so needs the link's Host.
 func (l ShareLink) PeerNeedsAddress() bool {
+	if l.V == 3 && (l.WatEnrollment != "" || l.AutoEnrollment != "") {
+		return false
+	}
 	side := l.PeerSide()
 	return (l.Kind == "reverse" && side == "kharej") || (l.Kind == "direct" && side == "iran")
 }
 
 // NeedsServerAddr reports whether the side this form builds dials the other.
 func (f PeerForm) NeedsServerAddr() bool {
+	if f.WatICMP != nil || f.Auto != nil {
+		return false
+	}
 	return (f.Kind == "reverse" && f.Side == "kharej") || (f.Kind == "direct" && f.Side == "iran")
 }
 
@@ -370,6 +391,9 @@ func (f PeerForm) NeedsServerAddr() bool {
 // second implementation of this in JavaScript would drift from this one, and
 // the symptom of the drift would be a tunnel that connects and carries nothing.
 func MirrorForPeer(l ShareLink) PeerForm {
+	if l.WatEnrollment != "" || l.AutoEnrollment != "" {
+		return mirrorPeerLink(l)
+	}
 	f := PeerForm{
 		Kind:       l.Kind,
 		Side:       l.PeerSide(),
@@ -397,7 +421,7 @@ func MirrorForPeer(l ShareLink) PeerForm {
 		f.Transport = l.Tr
 		if managedTransport(l.Tr) {
 			f.ManagedLink = &l
-			f.Note = "Managed HTTPS setup links require the terminal and matching optional helpers."
+			f.Note = "Managed HTTPS requires matching installed helpers on the other server."
 		}
 		paired = append(paired, "transport")
 		f.SimpleAuth, f.MuxVersion = l.SimpleAuth, l.MuxVer
@@ -584,6 +608,9 @@ func shareLinkWith(name, host string, cfg config.Config, x linkExtras) (string, 
 // shareLinkOf builds the link from a config in hand, which is how the direct
 // wizard shows it in its summary before the tunnel is written.
 func shareLinkOf(name, host string, cfg config.Config) (string, error) {
+	if cfg.Auto.Enabled || cfg.Server.Transport == config.WATICMP || cfg.Client.Transport == config.WATICMP {
+		return sharePeerLink(name, host, cfg)
+	}
 	if cfg.Client.Naive.Enabled() || cfg.Client.Xray.Enabled() {
 		return "", fmt.Errorf("generate the managed HTTPS setup link on Iran; server private keys cannot be reconstructed from Kharej")
 	}
@@ -656,6 +683,11 @@ func shareLinkOf(name, host string, cfg config.Config) (string, error) {
 			x := cfg.Server.Naive
 			l.Tr, l.Port, l.HelperUser, l.HelperPassword = "naive", addrPort(x.Listen), x.Username, x.Password
 			cert = x.Certificate
+			if l.Host != "" {
+				if err := validateNaiveLinkHost(cert, l.Host); err != nil {
+					return "", err
+				}
+			}
 		} else {
 			x := cfg.Server.Xray
 			l.Tr, l.Port = x.Mode, addrPort(x.Listen)

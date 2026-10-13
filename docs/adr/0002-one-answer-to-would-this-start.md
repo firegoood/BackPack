@@ -5,9 +5,9 @@
 ## Context
 
 Two pieces of code judged a tunnel configuration. The engine's load-time
-validation (`cmd/defaults.go validateConfig`) decides whether `backpack -c`
+validation (`cmd/defaults.go validateConfig`) decides whether `fullpack -c`
 starts, and a reload uses it to decide whether to keep the running tunnel.
-`backpack check` (`manage/spec.ValidateConfigFile`) answered the operator's
+`fullpack check` (`manage/spec.ValidateConfigFile`) answered the operator's
 question before a restart, with its own, smaller set of rules. The two could
 disagree: a file `check` passed could still be refused at start — an unknown
 transport, a pck tunnel without the capability, a fallback chain naming a
@@ -20,7 +20,7 @@ transport the engine does not have, a bad `pck_flags` list.
 
 `cmd.CheckConfigFile` runs exactly what `Run` runs before starting —
 `loadConfig`, `applyDefaults`, `validateConfig` — without starting anything.
-`main` installs it as `cli.EngineCheck`, and `backpack check` reports its
+`main` installs it as `cli.EngineCheck`, and `fullpack check` reports its
 static checks and then the engine's verdict. The static checks stay: they name
 every problem at once, where the engine stops at the first.
 

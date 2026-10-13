@@ -1,10 +1,15 @@
 # Build artifacts
-/backpack
+/fullpack
+/fullpack.exe
+# Local Python customization tooling caches.
+__pycache__/
 # Compiled test binaries (go test -c). Two were committed once: 45 MB of
 # machine-specific ELF carrying the build machine's paths.
 *.test
 /dist/
 /release/
+# Local read-only transport reference; never stage or ship it.
+/11/WatTunnel/
 
 # Go module cache accidentally copied into the project (must live outside it)
 /go/

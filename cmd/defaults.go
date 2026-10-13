@@ -12,13 +12,15 @@ import (
 	"github.com/backpack/backpack/internal/app"
 	"github.com/backpack/backpack/internal/tunnel/l3"
 	"github.com/backpack/backpack/internal/tunnel/naive"
+	"github.com/backpack/backpack/internal/tunnel/peerauto"
+	"github.com/backpack/backpack/internal/tunnel/waticmp"
 	"github.com/backpack/backpack/internal/utils/network"
 
 	"github.com/sirupsen/logrus"
 )
 
 const ( // Default values
-	defaultToken          = "backpack"
+	defaultToken          = "fullpack"
 	defaultChannelSize    = 2048
 	defaultRetryInterval  = 3 // only for client
 	defaultConnectionPool = 8
@@ -41,7 +43,7 @@ const ( // Default values
 	defaultMaxFrameSize     = 32768   // 32KB
 	defaultMaxReceiveBuffer = 4194304 // 4MB
 	defaultMaxStreamBuffer  = 65536   // 64KB
-	defaultSnifferLog       = "backpack.json"
+	defaultSnifferLog       = "fullpack.json"
 	defaultMuxCon           = 8
 )
 
@@ -224,6 +226,7 @@ func validateConfig(cfg *config.Config) error {
 	for _, check := range []func(*config.Config) error{
 		checkNaive,
 		checkXray,
+		checkWatICMP,
 		checkOutbound,
 		checkXdi,
 		checkSpoof,
@@ -249,6 +252,45 @@ func checkNaive(cfg *config.Config) error {
 	}
 	if err := naive.Validate(cfg); err != nil {
 		return fmt.Errorf("Naive configuration: %w", err)
+	}
+	return nil
+}
+
+func checkWatICMP(cfg *config.Config) error {
+	if cfg.Auto.Enabled {
+		return peerauto.Validate(cfg)
+	}
+	for _, s := range []struct {
+		tr    config.TransportType
+		wat   config.WatICMPConfig
+		token string
+	}{
+		{cfg.Server.Transport, cfg.Server.WatICMP, cfg.Server.Token},
+		{cfg.Client.Transport, cfg.Client.WatICMP, cfg.Client.Token},
+	} {
+		if s.tr != config.WATICMP {
+			if s.wat.Enabled {
+				return fmt.Errorf("waticmp.enabled requires the distinct waticmp transport")
+			}
+			continue
+		}
+		if runtime.GOOS != "linux" {
+			return fmt.Errorf("Wat ICMP currently requires Linux and CAP_NET_RAW")
+		}
+		if cfg.L3.Enabled() || cfg.Direct.Enabled() {
+			return fmt.Errorf("Wat ICMP is a reverse-stream carrier; Direct L3/legacy mode is unsupported")
+		}
+		if err := waticmp.SettingsOf(s.wat, s.token).Validate(); err != nil {
+			return err
+		}
+	}
+	if cfg.Client.Transport == config.WATICMP && (len(cfg.Client.FallbackAddrs) > 0 || cfg.Client.LoadBalance || cfg.Client.HealthFailover) {
+		return fmt.Errorf("Wat ICMP requires one explicit enrolled peer; address failover/load balancing is unsupported")
+	}
+	if cfg.Client.Transport == config.WATICMP || cfg.Server.Transport == config.WATICMP {
+		if cfg.Client.Proxy != "" || cfg.Client.LocalAddr != "" || cfg.Client.Interface != "" || cfg.Client.EdgeIP != "" || cfg.Client.MSS != 0 || cfg.Server.MSS != 0 || cfg.Server.ZeroCopy || cfg.Client.ZeroCopy || cfg.Server.SimpleAuth || cfg.Client.SimpleAuth {
+			return fmt.Errorf("native Wat ICMP does not implement legacy proxy/source/interface/CDN binding, MSS, zero-copy or simple-auth; remove these settings explicitly")
+		}
 	}
 	return nil
 }
@@ -392,7 +434,7 @@ func checkSpoof(cfg *config.Config) error {
 		return fmt.Errorf("transport = \"spoof\" is no longer a reverse tunnel: IP spoofing is a " +
 			"direct-tunnel carrier, and a reverse tunnel over it could never carry traffic " +
 			"(every one of its pooled sessions arrives at the same address, so each closed the " +
-			"one before it). Build it again as a direct tunnel — `sudo backpack` → Setup Iran / " +
+			"one before it). Build it again as a direct tunnel — `sudo fullpack` → Setup Iran / " +
 			"Setup Kharej → Direct, and choose Spoof as the carrier — which forwards the same " +
 			"ports over the same forged-source packets. See docs/ip-spoofing.md.")
 	}
@@ -598,7 +640,7 @@ func checkOutbound(cfg *config.Config) error {
 // and the only defect this has ever had was a transport missing from the list.
 func transportIgnoresOutbound(t config.TransportType) bool {
 	switch t {
-	case config.UDP, config.KCP, config.XDI, config.PCK, config.QUIC, config.SPOOF:
+	case config.UDP, config.KCP, config.XDI, config.PCK, config.QUIC, config.SPOOF, config.WATICMP:
 		return true
 	}
 	return false

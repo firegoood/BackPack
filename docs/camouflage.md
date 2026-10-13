@@ -40,9 +40,9 @@ it says a program answered, not a file.
 
 ## Every server is a different server
 
-Looking ordinary is only half of it. If every Backpack install answered with the
+Looking ordinary is only half of it. If every FullPack install answered with the
 same bytes, a single internet-wide scan for that exact response would find every
-Backpack server there is — no token and no probing needed. Camouflage everyone
+FullPack server there is — no token and no probing needed. Camouflage everyone
 wears identically is a uniform.
 
 So each install derives its own web-server identity from **its tunnel token**:
@@ -96,8 +96,8 @@ to configure.
 فایل واقعی را دارد (`Last-Modified`، `ETag`، `Accept-Ranges`، `Content-Length`) و
 به درخواست‌های شرطی هم مثل یک فایل روی دیسک جواب `304` می‌دهد.
 
-**هر سرور، یک سرور متفاوت:** اگر همهٔ نصب‌های بک‌پک بایت‌به‌بایت یکسان جواب
-می‌دادند، یک اسکن سراسری روی همان پاسخ، تمام سرورهای بک‌پک دنیا را پیدا می‌کرد —
+**هر سرور، یک سرور متفاوت:** اگر همهٔ نصب‌های FullPack بایت‌به‌بایت یکسان جواب
+می‌دادند، یک اسکن سراسری روی همان پاسخ، تمام سرورهای FullPack دنیا را پیدا می‌کرد —
 بدون توکن و بدون هیچ کاوشی. استتاری که همه یکسان می‌پوشند، «لباس فرم» است.
 
 برای همین هر نصب هویت وب‌سرور خودش را از **توکن تونل خودش** می‌سازد: نسخهٔ nginx
@@ -119,4 +119,4 @@ to configure.
 
 ---
 
-*Last verified against Backpack v1.9.0.*
+*Last verified against FullPack v1.9.0.*

@@ -30,7 +30,7 @@ var loginHTML []byte
 //go:embed assets/twofactor.html
 var twoFactorHTML []byte
 
-const sessionCookie = "backpack_session"
+const sessionCookie = "fullpack_session"
 
 // sessionTTL is how long a signed-in browser stays signed in. It was written
 // out as `12 * time.Hour` in the store and as `12 * 3600` in the cookie; one
@@ -261,7 +261,7 @@ func (s *server) updatePassword(pw string) error {
 	return err
 }
 
-// Serve starts the web panel and blocks. Invoked by `backpack --webui`.
+// Serve starts the web panel and blocks. Invoked by `fullpack --webui`.
 func Serve() error {
 	cfg, err := EnsurePassword()
 	if err != nil {
@@ -270,7 +270,7 @@ func Serve() error {
 	srv := newServer()
 
 	// The SOCKS5 relay, the watchdog, the Telegram bot and the alerts all
-	// deliberately run elsewhere — in the backpack-monitor service. See
+	// deliberately run elsewhere — in the fullpack-monitor service. See
 	// internal/monitor for why.
 
 	// The panel shows live stats, tunnel state and logs, and — through the
@@ -428,6 +428,8 @@ func (s *server) routes() *http.ServeMux {
 	mux.HandleFunc("/api/direct/defaults", s.requireAuth(s.handleDirectDefaults))
 	mux.HandleFunc("/api/direct/create", s.requireAuth(s.handleDirectCreate))
 	mux.HandleFunc("/api/tunnel/settings", s.requireAuth(s.handleTunnelSettings))
+	mux.HandleFunc("/api/tunnel/auto", s.requireAuth(s.handlePeerAuto))
+	mux.HandleFunc("/api/tunnel/peer-enrollment", s.requireAuth(s.handlePeerEnrollment))
 	// Handing a tunnel's paired settings to the other server, and taking them
 	// from it. See handleShareLink.
 	// Managed servers: the fleet, the login each one is reached with, and

@@ -13,6 +13,7 @@ import (
 	"github.com/backpack/backpack/internal/client"
 
 	"github.com/backpack/backpack/internal/server"
+	"github.com/backpack/backpack/internal/tunnel/peerauto"
 	"github.com/backpack/backpack/internal/utils"
 	"github.com/backpack/backpack/internal/utils/handlers"
 	"github.com/backpack/backpack/internal/utils/network"
@@ -151,7 +152,7 @@ func Run(configPath string, ctx context.Context) {
 		ctl.setGeneration(cancel, cfg)
 		go func() {
 			defer close(done)
-			runEngine(&running, runCtx, configPath, applyTuning)
+			runEngine(&running, runCtx, configPath, applyTuning, ctl)
 		}()
 		go watchQuota(runCtx, configPath, cancel)
 
@@ -183,7 +184,55 @@ func Run(configPath string, ctx context.Context) {
 }
 
 // runEngine runs one tunnel until ctx ends.
-func runEngine(cfg *config.Config, ctx context.Context, configPath string, applyTuning bool) {
+func runEngine(cfg *config.Config, ctx context.Context, configPath string, applyTuning bool, ctl *engineControl) {
+	if cfg.Auto.Enabled {
+		m, err := peerauto.New(ctx, cfg, configPath+".auto-state.json")
+		if err != nil {
+			logger.Errorf("peer Auto refused: %v", err)
+			<-ctx.Done()
+			return
+		}
+		ctl.setAuto(m)
+		clearDiagnostics := metrics.SetTransportDiagnostics(func() any { return m.Snapshot() })
+		role := "client"
+		if cfg.Server.BindAddr != "" {
+			role = "server"
+		}
+		stopMetrics := startMetrics(ctx, configPath, "auto", role)
+		reportCtx, cancelReport := context.WithCancel(ctx)
+		reportDone := make(chan struct{})
+		defer func() {
+			cancelReport()
+			<-reportDone
+			m.Close()
+			ctl.setAuto(nil)
+			stopMetrics()
+			clearDiagnostics()
+		}()
+		go func() {
+			defer close(reportDone)
+			ticker := time.NewTicker(time.Second)
+			defer ticker.Stop()
+			defer metrics.ClearPeer()
+			for {
+				select {
+				case <-reportCtx.Done():
+					return
+				case <-ticker.C:
+					if s := m.Snapshot(); s.Active != "" {
+						metrics.ReportPeer(s.PeerID)
+					} else {
+						metrics.ClearPeer()
+					}
+				}
+			}
+		}()
+		if err = m.Start(); err != nil {
+			logger.Errorf("peer Auto stopped: %v", err)
+			<-ctx.Done()
+		}
+		return
+	}
 	cleanupPck := func() {
 		network.CleanupPckGuards(cfg.Server.Token, cfg.Client.Token, cfg.Direct.Token, cfg.L3.Token)
 	}
@@ -260,11 +309,11 @@ func runEngine(cfg *config.Config, ctx context.Context, configPath string, apply
 }
 
 // CheckConfigFile is the load-time validation Run applies to a config file,
-// without starting anything: `backpack check` asks it, so the question "would
+// without starting anything: `fullpack check` asks it, so the question "would
 // this start?" has one answer, the engine's. See cli.EngineCheck.
 //
 // The engine logs to stdout, which is right under systemd and wrong here:
-// `backpack check --json` owns stdout, and a warning ahead of the JSON breaks
+// `fullpack check --json` owns stdout, and a warning ahead of the JSON breaks
 // whatever parses it. For the check, the log goes to stderr.
 func CheckConfigFile(path string) error {
 	out := logger.Out

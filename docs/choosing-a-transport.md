@@ -1,6 +1,6 @@
 # Choosing a transport (Link Test)
 
-Not sure which transport suits your route? Let Backpack measure it.
+Not sure which transport suits your route? Let FullPack measure it.
 
 ## Run the test
 
@@ -40,7 +40,7 @@ Change a tunnel's transport any time from **Edit → Change transport**.
 
 ## خلاصهٔ فارسی
 
-نمی‌دانی کدام ترنسپورت به مسیرت می‌خورد؟ بگذار بک‌پک اندازه بگیرد.
+نمی‌دانی کدام ترنسپورت به مسیرت می‌خورد؟ بگذار FullPack اندازه بگیرد.
 
 روی سرور **خارج** برو به **Manage → Link Test**. تأخیر، جیتر و افت پکت را
 **روی TCP** می‌سنجد (نه ICMP، چون خیلی از شبکه‌های این مسیر پینگ را می‌اندازند
@@ -63,4 +63,4 @@ Change a tunnel's transport any time from **Edit → Change transport**.
 
 ---
 
-*Last verified against Backpack v1.9.0.*
+*Last verified against FullPack v1.9.0.*

@@ -1,0 +1,83 @@
+{
+  "version": "2.4.8",
+  "tree_sha256": "b02cf1a38a42649f8066ca14573d5a98028e94ccf7e676460979808b5b7cf7a2",
+  "git_sha": null,
+  "files": [
+    {
+      "source": "wat/session.go",
+      "sha256": "92733cc9d687244b6d1872ee38d7797bb6610b816596561fdaad4d1068827445"
+    },
+    {
+      "source": "wat/stream.go",
+      "sha256": "7c8139ea2525367de0932c81d64624b1fc632a72edcfdc5abb9a75970fdf4050"
+    },
+    {
+      "source": "wat/wire.go",
+      "sha256": "e03eb8aa541a4e7991e6b27c4977cf43b50a8c1366a24ce8533a5b4caebff80a"
+    },
+    {
+      "source": "wat/ranges.go",
+      "sha256": "a221a35c5a4809e2e1539607db6dde392327e67196c1c607f410885c356394c1"
+    },
+    {
+      "source": "wat/sched.go",
+      "sha256": "375d09f33826f094d7c2ebd63a17fdb4d61c41e7c5f2e1b1208b102b6f8248fe"
+    },
+    {
+      "source": "wat/cc.go",
+      "sha256": "963a3576f458b8636ac1220ee0224112dc519fa8725159d81ae0ecf27e9bb113"
+    },
+    {
+      "source": "wat/fec.go",
+      "sha256": "287e09f3a3bf57099854ad4238d0875c19749a90eb68381cca7fdfedc1fd6bd1"
+    },
+    {
+      "source": "wat/datagram.go",
+      "sha256": "e48bab3b6da1e6f6397500265fb690727e79cedd1b7ee429836712b79298e249"
+    },
+    {
+      "source": "wat/icmp_linux.go",
+      "sha256": "e497f05a5bb8bb40fbe524ab2746108a164b60e20c67c5329a7c15c77e1e5fce"
+    },
+    {
+      "source": "wat/icmp_other.go",
+      "sha256": "9e810d7848da9c017a87cd416a11ef18bea4f0496f1b2c92693209082b1b56ba"
+    },
+    {
+      "source": "wat/batch_linux.go",
+      "sha256": "465c8bd73a664dfd4e64293e66aafba980a175fa568a7ddc0472546c53a1d684"
+    },
+    {
+      "source": "wat/paths.go",
+      "sha256": "39ada70f10ae343d9c3bf91f3d6bb2793058327206eaf432684ebd6e8eeda655",
+      "portion": "interface/type definitions only"
+    },
+    {
+      "source": "wat/io.go",
+      "sha256": "eec782c0e013e8179efb278f777cd86c2f69e34c97738e81241b45b2f4c9b0a7",
+      "portion": "packet/profile/batch interfaces and ICMP type mapping"
+    },
+    {
+      "source": "wat/server.go",
+      "sha256": "bde9cc4242aa356100afdd53ae70754c069e9d3299a2ba3c5cf8fb8ad6d5fc8e",
+      "portion": "bounded receive-error backoff algorithm only in backoff.go"
+    }
+  ],
+  "modifications": [
+    "fresh bilateral X25519/PSK envelope outside engine; new stream KDF domain",
+    "no wall-clock server nonce; constructor requires ephemeral session key/ID",
+    "bounded stream/window defaults and parser arithmetic guards",
+    "real stream deadlines, bounded FIN drain and worker cleanup",
+    "receive-window retirement accounting fix",
+    "explicit raw peer address, conservative socket buffers",
+    "unrelated standalone manager and TCP/TLS/WS/UDP carrier implementations excluded",
+    "nonnegative bounded ACK delay prevents pump/receiver time snapshot underflow",
+    "IPv4 do-not-fragment socket policy and authenticated PMTU validation in native envelope",
+    "separate authenticated-packet and replay-drop counters with allocation regression coverage",
+    "unused UDP batch implementation and unmeasured reference throughput claims removed",
+    "one-second initial loss/PTO floor permits an authenticated first RTT sample on delayed paths",
+    "explicit low pacing ceilings also bound initial rate and minimum rate",
+    "bounded retired-packet timing metadata lets authenticated late ACKs repair RTT estimates after path delay changes",
+    "paced packet accounting includes the native enrollment envelope as well as IPv4/ICMP headers"
+  ]
+}

@@ -526,3 +526,9 @@ body[data-accent] .dlg.add .rp2.on .rp-load i.on{background:var(--ac)}
 .dlg.add .rp-sets-g span{display:block;font-size:10px;font-weight:640;letter-spacing:.07em;text-transform:uppercase;color:var(--dim)}
 .dlg.add .rp-sets-g b{display:block;font-size:14px;font-weight:650;margin-top:3px;font-variant-numeric:tabular-nums}
 @media (prefers-reduced-motion:reduce){ .dlg.add .rp-sets-g > div{animation:none} }
+
+.dlg .peer-settings p{line-height:1.6;overflow-wrap:anywhere}
+.dlg .peer-settings .f3{display:flex;flex-direction:column;gap:6px;margin:12px 0}
+.dlg .peer-settings .peer-candidate{border:1px solid var(--ln);border-radius:12px;padding:12px;margin:16px 0;min-width:0}
+.dlg .peer-settings input[type=checkbox]{align-self:flex-start;width:auto}
+.dlg .peer-settings button{padding:8px;border:1px solid var(--ln);border-radius:8px;background:var(--field);color:var(--tx);cursor:pointer}

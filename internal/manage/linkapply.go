@@ -15,13 +15,13 @@ import (
 // Building the kharej end from a setup link without a single question.
 //
 // The Iran wizard prints two things under its summary: the link, for a kharej
-// that already runs Backpack, and one command that installs Backpack and hands
+// that already runs FullPack, and one command that installs FullPack and hands
 // it the link, for one that does not. Both end here. The kharej wizard's Setup
 // Link answer builds the same tunnel, but asks this side's own questions — a
 // CDN edge, a proxy — which a command pasted into a fresh server has nobody to
 // ask, so here they keep their defaults.
 
-// LinkApplyOptions are what `backpack link apply` can be told beyond the link.
+// LinkApplyOptions are what `fullpack link apply` can be told beyond the link.
 type LinkApplyOptions struct {
 	// Name replaces the name the link suggests.
 	Name string
@@ -48,7 +48,7 @@ type LinkApplied struct {
 
 // ErrLinkNeedsHost is a link that does not say where the Iran server is.
 var ErrLinkNeedsHost = errors.New("the setup link does not say where the Iran server is — " +
-	"give its address with --host (backpack link apply --host 1.2.3.4 'backpack://…')")
+	"give its address with --host (fullpack link apply --host 1.2.3.4 'backpack://…')")
 
 // linkChars is what a setup link is made of after its scheme.
 var linkChars = regexp.MustCompile(`^[A-Za-z0-9_\-=.]+`)
@@ -100,7 +100,7 @@ func ApplySetupLink(raw string, o LinkApplyOptions) (LinkApplied, error) {
 	}
 	if !strings.EqualFold(link.From, "iran") {
 		return LinkApplied{}, fmt.Errorf("this link was made on a kharej server and is for the Iran side: " +
-			"paste it there, under sudo backpack → Setup from a link")
+			"paste it there, under sudo fullpack → Setup from a link")
 	}
 	if existing := tunnelWithToken(link.Tok); existing != "" {
 		// The same tunnel, set up again. That is what happens after the Iran
@@ -146,7 +146,7 @@ func kharejFromLink(link ShareLink, o LinkApplyOptions) (TunnelSpec, error) {
 	if host == "" {
 		host = strings.Trim(strings.TrimSpace(link.Host), "[]")
 	}
-	if host == "" {
+	if host == "" && link.PeerNeedsAddress() {
 		return TunnelSpec{}, ErrLinkNeedsHost
 	}
 	s := reverseClientFromLink(link, host)
@@ -168,7 +168,7 @@ func updateReverseFromLink(link ShareLink, o LinkApplyOptions, existing string) 
 	if host == "" {
 		host = strings.Trim(strings.TrimSpace(link.Host), "[]")
 	}
-	if host == "" {
+	if host == "" && link.PeerNeedsAddress() {
 		return LinkApplied{}, ErrLinkNeedsHost
 	}
 	paired := reverseClientFromLink(link, host)
@@ -182,6 +182,7 @@ func updateReverseFromLink(link ShareLink, o LinkApplyOptions, existing string) 
 	// Only the peer-owned wire settings come from the link. Local routing,
 	// retry timing, monitoring and capacity tuning belong to this machine.
 	s.Transport, s.RemoteAddr, s.Token = paired.Transport, paired.RemoteAddr, paired.Token
+	s.WatICMP, s.Auto = paired.WatICMP, paired.Auto
 	s.FallbackAddrs, s.FallbackTransports, s.FallbackDwell = paired.FallbackAddrs, paired.FallbackTransports, paired.FallbackDwell
 	s.MSS, s.SimpleAuth = paired.MSS, paired.SimpleAuth
 	s.MuxVersion = paired.MuxVersion

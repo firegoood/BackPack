@@ -20,16 +20,21 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Verify FullPack customizations
+        run: |
+          python3 tools/customize/reapply.py --check
+          python3 -m unittest discover -s tools/customize -p 'test_*.py'
+
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: true
 
-      # Configuration round-trip tests exercise the real /etc/backpack paths.
+      # Configuration round-trip tests exercise the real /etc/fullpack paths.
       # The ephemeral runner owns their private fixture directory; production
       # configuration permissions remain unchanged.
       - name: Prepare configuration test fixtures
-        run: sudo install -d -m 700 -o "$(id -un)" -g "$(id -gn)" /etc/backpack
+        run: sudo install -d -m 700 -o "$(id -un)" -g "$(id -gn)" /etc/fullpack
 
       # The panel's own tests are plain `node --test` with no dependencies, and
       # `go test ./internal/webui` runs them. That test skips when node is
@@ -42,7 +47,7 @@ jobs:
 
       - name: Verify formatting
         run: |
-          unformatted="$(gofmt -l . || true)"
+          unformatted="$(sh tools/check-gofmt.sh)"
           if [ -n "$unformatted" ]; then
             echo "These files are not gofmt'd:"
             echo "$unformatted"
@@ -77,7 +82,9 @@ jobs:
         # The floor only ever goes up. If this fails, look at what stopped being
         # exercised before lowering it.
         run: |
-          go test ./... -coverpkg=./... -coverprofile=coverage.out -timeout 20m
+          # Native reverse forwarding must contribute actual raw-socket e2e
+          # coverage to the existing transport floors instead of being skipped.
+          sudo env "PATH=$PATH" WATICMP_LIVE=1 go test ./... -coverpkg=./... -coverprofile=coverage.out -timeout 20m
           total="$(go tool cover -func=coverage.out | tail -1 | grep -oE '[0-9.]+')"
           echo "total coverage: ${total}%"
           floor=50
@@ -142,6 +149,29 @@ jobs:
           BP_CONNTEST_HELPERS: '1'
         run: go test ./internal/manage -run '^(TestRealityCoverSelectionAuthenticatesWithThePinnedHelper|TestAConnectionTestOverLoopbackPassesEveryReverseTransport)$' -race -count=1 -v -timeout 8m
 
+  native-peer:
+    name: Native ICMP and enrolled peer recovery
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Real raw sockets and fresh carrier probes
+        run: sudo env "PATH=$PATH" WATICMP_LIVE=1 go test ./internal/tunnel/waticmp ./internal/e2e -run 'TestNative|TestWatICMP|TestPeerCoordinated|TestPeerAuto|TestEnrolled' -race -count=1 -timeout 8m
+      - name: Two isolated nodes, MTU and reverse-only path
+        run: |
+          sudo env "PATH=$PATH" WATICMP_NETNS=1 bash internal/e2e/testdata/waticmp-netns.sh
+          sudo env "PATH=$PATH" WATICMP_NETNS=1 WATICMP_PEER_TEST=1 bash internal/e2e/testdata/waticmp-netns.sh
+      - name: Native identities alongside ping and unchanged xDi
+        run: sudo env "PATH=$PATH" WATICMP_NETNS=1 bash internal/e2e/testdata/icmp-coexist.sh
+      - name: Loss of control/data, coordinated switch and recovery
+        run: sudo env "PATH=$PATH" WATICMP_NETNS=1 bash internal/e2e/testdata/peerauto-netns.sh
+      - name: Opt-in sustained degradation with a reachable alternative
+        run: sudo env "PATH=$PATH" WATICMP_NETNS=1 WATICMP_DEGRADATION=1 DEGRADATION_ENABLED=true bash internal/e2e/testdata/peerauto-netns.sh
+
   audit:
     name: Vulnerabilities and static analysis
     runs-on: ubuntu-latest
@@ -205,6 +235,9 @@ jobs:
           go test ./internal/utils/network/    -run=X -fuzz=FuzzParseSpoofProfile  -fuzztime=20s
           go test ./internal/manage/           -run=X -fuzz=FuzzDecodeShareLink    -fuzztime=30s
           go test ./internal/manage/           -run=X -fuzz=FuzzShareLinkRoundTrip -fuzztime=30s
+          go test ./internal/tunnel/waticmp/engine -run=X -fuzz=FuzzAckDecoder -fuzztime=30s
+          go test ./internal/tunnel/peerauto -run=X -fuzz=FuzzControlFrame -fuzztime=30s
+
 
       - name: Report a crasher
         if: failure()
@@ -273,8 +306,8 @@ jobs:
           fi
           echo "previous release: $tag"
           git worktree add --detach /tmp/prev "$tag"
-          (cd /tmp/prev && go build -o /tmp/backpack-prev .)
-          echo "binary=/tmp/backpack-prev" >> "$GITHUB_OUTPUT"
+          (cd /tmp/prev && go build -o /tmp/fullpack-prev .)
+          echo "binary=/tmp/fullpack-prev" >> "$GITHUB_OUTPUT"
 
       - name: Old and new ends of one tunnel, both directions
         if: steps.prev.outputs.binary != ''
@@ -322,7 +355,7 @@ jobs:
         with:
           name: release-assets
           path: |
-            release/backpack_linux_amd64.tar.gz
-            release/backpack_linux_arm64.tar.gz
+            release/fullpack_linux_amd64.tar.gz
+            release/fullpack_linux_arm64.tar.gz
             release/SHA256SUMS
           retention-days: 14

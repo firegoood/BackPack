@@ -8,6 +8,7 @@ import (
 	"github.com/backpack/backpack/internal/app"
 	"github.com/backpack/backpack/internal/metrics"
 	"github.com/backpack/backpack/internal/quota"
+	"github.com/backpack/backpack/internal/tunnel/peerauto"
 )
 
 // Renaming a tunnel.
@@ -45,7 +46,9 @@ func Rename(oldName, newName string) error {
 
 	// Stopped first, so its last traffic count is written under the old name
 	// before the file moves.
-	_ = DisableService(oldService)
+	if err := DisableService(oldService); err != nil {
+		return err
+	}
 	removeUnit(oldName)
 	removeScheduledRestart(oldName)
 	restoreOld := func(why error) error {
@@ -64,14 +67,21 @@ func Rename(oldName, newName string) error {
 	if err := os.Rename(app.ConfigPath(oldName), app.ConfigPath(newName)); err != nil {
 		return restoreOld(fmt.Errorf("could not rename the config: %w", err))
 	}
+	oldState, newState := app.ConfigPath(oldName)+".auto-state.json", app.ConfigPath(newName)+".auto-state.json"
+	if err := peerauto.MoveStoppedState(oldState, newState); err != nil {
+		rollback := os.Rename(app.ConfigPath(newName), app.ConfigPath(oldName))
+		return restoreOld(errors.Join(fmt.Errorf("could not preserve Auto fencing state: %w", err), rollback))
+	}
 	if err := quota.Rename(app.ConfigDir, oldName, newName); err != nil {
 		rollback := os.Rename(app.ConfigPath(newName), app.ConfigPath(oldName))
-		return restoreOld(errors.Join(fmt.Errorf("could not rename traffic quota: %w", err), rollback))
+		stateErr := peerauto.MoveStoppedState(newState, oldState)
+		return restoreOld(errors.Join(fmt.Errorf("could not rename traffic quota: %w", err), rollback, stateErr))
 	}
 	if err := os.Rename(metrics.Path(app.ConfigDir, oldName), metrics.Path(app.ConfigDir, newName)); err != nil && !errors.Is(err, os.ErrNotExist) {
 		quotaErr := quota.Rename(app.ConfigDir, newName, oldName)
 		configErr := os.Rename(app.ConfigPath(newName), app.ConfigPath(oldName))
-		return restoreOld(errors.Join(fmt.Errorf("could not rename traffic counters: %w", err), quotaErr, configErr))
+		stateErr := peerauto.MoveStoppedState(newState, oldState)
+		return restoreOld(errors.Join(fmt.Errorf("could not rename traffic counters: %w", err), quotaErr, configErr, stateErr))
 	}
 	renameTunnelMeta(oldName, newName)
 	for _, f := range onRename {

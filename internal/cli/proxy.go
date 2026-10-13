@@ -9,7 +9,7 @@ import (
 	"github.com/backpack/backpack/internal/manage"
 )
 
-// `backpack proxy` — the menu's Built-in Proxy, without the menu.
+// `fullpack proxy` — the menu's Built-in Proxy, without the menu.
 //
 // The proxy belongs on the tunnel's exit side, which for a reverse tunnel is
 // the kharej. The panel lives on the Iran server, so when it wires a tunnel's
@@ -85,7 +85,7 @@ func proxyEnable(args []string) Result {
 		}
 	}
 	if len(pos) != 2 {
-		return fail(CodeUsage, "usage: backpack proxy enable <socks5|http> <port> [--user U --pass P]\n")
+		return fail(CodeUsage, "usage: fullpack proxy enable <socks5|http> <port> [--user U --pass P]\n")
 	}
 	switch localproxy.Kind(strings.ToLower(pos[0])) {
 	case localproxy.SOCKS5:

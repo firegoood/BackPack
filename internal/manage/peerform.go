@@ -23,6 +23,7 @@ func (f PeerForm) ToNewTunnel() NewTunnel {
 		role = "server"
 	}
 	n := NewTunnel{
+		WatICMP: f.WatICMP, Auto: f.Auto,
 		Role:       role,
 		Transport:  f.Transport,
 		Name:       f.Name,
@@ -33,6 +34,13 @@ func (f PeerForm) ToNewTunnel() NewTunnel {
 	}
 	if role == "client" {
 		n.ServerAddr = f.ServerAddr
+		if l := f.ManagedLink; l != nil && managedTransport(f.Transport) {
+			n.Managed = &ManagedHTTPS{InternalPort: l.InnerPort,
+				Username: l.HelperUser, Password: l.HelperPassword,
+				UUID: l.HelperUUID, ServerName: l.HelperSNI, Path: l.HelperPath,
+				Host: l.HelperHost, PublicKey: l.HelperPublicKey, ShortID: l.HelperShortID,
+				CAPEM: l.HelperCA}
+		}
 	}
 	// The paired settings travel in the Fine Tune drawer, marked as sent key
 	// by key. A drawer built in code without that mark counts every field as

@@ -7,12 +7,26 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net"
 	"sync"
 
 	utls "github.com/refraction-networking/utls"
 )
 
 var errNoTLSState = errors.New("no TLS connection state")
+
+// WSSConnProof gives a typed in-band protocol the same TLS-bound credential.
+// There is no raw-token or certificate-only fallback.
+func WSSConnProof(c net.Conn, token string) (string, error) {
+	switch t := c.(type) {
+	case *tls.Conn:
+		s := t.ConnectionState()
+		return WSSServerProof(&s, token)
+	case *utls.UConn:
+		return wssClientBinding(t, token)
+	}
+	return "", errNoTLSState
+}
 
 // Binding the WSS credential to the TLS session.
 //

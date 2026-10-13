@@ -27,7 +27,7 @@ func TestThePanelFormBuildsAWorkingDirectConfig(t *testing.T) {
 	if cfg.L3.Addr != "203.0.113.9:9000" {
 		t.Errorf("addr = %q", cfg.L3.Addr)
 	}
-	// Always Backpack's own GRE. The panel offers no choice, exactly as the
+	// Always FullPack's own GRE. The panel offers no choice, exactly as the
 	// wizard offers none.
 	if cfg.L3.Encap != "gre" {
 		t.Errorf("encap = %q, want gre", cfg.L3.Encap)

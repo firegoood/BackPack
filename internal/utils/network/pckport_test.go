@@ -145,9 +145,9 @@ func TestPckRulesAreTaggedByTunnelNotByToken(t *testing.T) {
 // written for, and nothing of another tunnel's is touched.
 func TestLeftoverRulesAreFoundByTheTunnelTag(t *testing.T) {
 	listing := `-P OUTPUT ACCEPT
--A OUTPUT -p tcp -m tcp --sport 41000:41127 --tcp-flags RST RST -m comment --comment backpack-pck-aabbccdd-41000:41127 -j DROP
--A OUTPUT -p tcp -m tcp --sport 50000:50127 --tcp-flags RST RST -m comment --comment backpack-pck-11223344-50000:50127 -j DROP
--A OUTPUT -p tcp -m tcp --sport 42000:42127 -m comment --comment "backpack-pck-aabbccdd-42000:42127" -j NOTRACK
+-A OUTPUT -p tcp -m tcp --sport 41000:41127 --tcp-flags RST RST -m comment --comment fullpack-pck-aabbccdd-41000:41127 -j DROP
+-A OUTPUT -p tcp -m tcp --sport 50000:50127 --tcp-flags RST RST -m comment --comment fullpack-pck-11223344-50000:50127 -j DROP
+-A OUTPUT -p tcp -m tcp --sport 42000:42127 -m comment --comment "fullpack-pck-aabbccdd-42000:42127" -j NOTRACK
 -A INPUT -p tcp --dport 22 -j ACCEPT`
 	got := tunnelRuleDeletions(listing, pckRulePrefix("aabbccdd"))
 	if len(got) != 2 {

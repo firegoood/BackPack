@@ -130,15 +130,19 @@ func rowOf(r manage.ConnTestResult) conntestRow {
 
 // start begins a test in the background and returns once the test tunnels are
 // up and the link exists, or they could not be started.
-func (c *conntestRunner) start(parent context.Context, host, preset string) error {
+func (c *conntestRunner) start(parent context.Context, host, preset string, watPeer ...string) error {
 	ctx, cancel := context.WithCancel(parent)
 	c.mu.Lock()
 	c.cancel = cancel
 	c.v = conntestView{State: ctStarting, Host: host, Preset: preset, Started: time.Now().Unix()}
 	c.mu.Unlock()
 
+	peer := ""
+	if len(watPeer) != 0 {
+		peer = watPeer[0]
+	}
 	s, link, err := manage.StartConnTestIran(manage.ConnTestOptions{
-		Host: host, Preset: preset,
+		Context: ctx, Host: host, Preset: preset, WatPeerIPv4: peer,
 		// The menu includes what needs root only with root; the panel runs as
 		// root on a real server, so this is normally everything.
 		Direct: os.Geteuid() == 0, SpoofSrc: manage.ConnTestSpoofSource,
@@ -151,7 +155,7 @@ func (c *conntestRunner) start(parent context.Context, host, preset string) erro
 	wait := manage.ConnTestJoinWait()
 	c.update(func(v *conntestView) {
 		v.State, v.Link = ctWaiting, link
-		v.Command = "sudo backpack link apply '" + link + "'"
+		v.Command = "sudo fullpack link apply '" + link + "'"
 		v.Install = manage.InstallCommand(link)
 		v.Deadline = time.Now().Add(wait).Unix()
 	})
@@ -253,7 +257,7 @@ func (s *server) handleConnTest(w http.ResponseWriter, r *http.Request) {
 			if ctx == nil {
 				ctx = context.Background()
 			}
-			if err := s.conntest.start(ctx, host, preset); err != nil {
+			if err := s.conntest.start(ctx, host, preset, strings.TrimSpace(r.FormValue("watPeerIpv4"))); err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}

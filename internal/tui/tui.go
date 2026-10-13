@@ -1,5 +1,5 @@
 // Package tui provides small terminal helpers (colors, prompts, banners)
-// used by the interactive backpack menu. No third-party dependencies.
+// used by the interactive fullpack menu. No third-party dependencies.
 //
 // The theme uses three colors only: red (accents, numbers, errors), white
 // (titles, values) and gray (descriptions, separators).
@@ -124,19 +124,16 @@ func Rule() {
 	fmt.Println(Gray + "═══════════════════════════════════════════════════════" + Reset)
 }
 
-// Logo prints the backpack banner and version.
+// Logo prints the fullpack banner and version.
 func Logo(version string) {
 	fmt.Print(Red)
 	fmt.Println(`
- ██████╗  █████╗  ██████╗██╗  ██╗██████╗  █████╗  ██████╗██╗  ██╗
- ██╔══██╗██╔══██╗██╔════╝██║ ██╔╝██╔══██╗██╔══██╗██╔════╝██║ ██╔╝
- ██████╔╝███████║██║     █████╔╝ ██████╔╝███████║██║     █████╔╝
- ██╔══██╗██╔══██║██║     ██╔═██╗ ██╔═══╝ ██╔══██║██║     ██╔═██╗
- ██████╔╝██║  ██║╚██████╗██║  ██╗██║     ██║  ██║╚██████╗██║  ██╗
- ╚═════╝ ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝`)
+  ╔══════════════════════╗
+  ║       FullPack       ║
+  ╚══════════════════════╝`)
 	fmt.Print(Reset)
-	fmt.Printf("%s Backpack  %s%s%s\n", Bold+White, Red, version, Reset)
-	fmt.Println(Gray + " TeleGram : @BlackProtocols  |  GitHub : https://github.com/AminMGMT" + Reset)
+	fmt.Printf("%s FullPack  %s%s%s\n", Bold+White, Red, version, Reset)
+	fmt.Println(Gray + " GitHub : https://github.com/firegoood/BackPack" + Reset)
 }
 
 // Prompt reads a trimmed line after printing label.

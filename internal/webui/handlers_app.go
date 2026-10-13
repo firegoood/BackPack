@@ -44,9 +44,9 @@ func (s *server) handleChannel(w http.ResponseWriter, r *http.Request) {
 // every installed app at the root, where the panel no longer answers.
 var manifestJSON = []byte(`{
   "id": "./",
-  "name": "Backpack Panel",
-  "short_name": "Backpack",
-  "description": "Live tunnel and server monitoring for Backpack.",
+  "name": "FullPack Panel",
+  "short_name": "FullPack",
+  "description": "Live tunnel and server monitoring for FullPack.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -80,7 +80,7 @@ var (
 //go:embed assets/sw.js
 var serviceWorkerJS []byte
 
-// iconSVG is the header's backpack mark on the panel's dark ground, as a file.
+// iconSVG is the header's fullpack mark on the panel's dark ground, as a file.
 var iconSVG = []byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
   <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
     <stop offset="0" stop-color="#262626"/><stop offset="1" stop-color="#070707"/>

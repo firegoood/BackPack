@@ -27,6 +27,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Verify FullPack customizations
+        run: |
+          python3 tools/customize/reapply.py --check
+          python3 -m unittest discover -s tools/customize -p 'test_*.py'
+
       - name: Resolve the tag
         # A pushed tag is its own name. A manual run started on a branch has
         # only the branch name in GITHUB_REF_NAME ("main"), which is not a
@@ -122,7 +127,7 @@ jobs:
             f { print }
           ' CHANGELOG.md > RELEASE_NOTES.md
           if [ ! -s RELEASE_NOTES.md ]; then
-            echo "Backpack ${tag}" > RELEASE_NOTES.md
+            echo "FullPack ${tag}" > RELEASE_NOTES.md
           fi
 
       - name: Publish
@@ -146,7 +151,7 @@ jobs:
           # this did not, and nothing failed — the assets simply were not there,
           # and an update on those machines 404s.
           files: |
-            release/backpack_linux_*.tar.gz
+            release/fullpack_linux_*.tar.gz
             release/SHA256SUMS
             release/SHA256SUMS.sig
             release/SBOM.txt

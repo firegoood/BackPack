@@ -67,7 +67,7 @@ func checkMark(l CheckLevel) string {
 	}
 }
 
-// FileLocations prints every path Backpack uses with a ✓/✗ so the user can see
+// FileLocations prints every path FullPack uses with a ✓/✗ so the user can see
 // what is installed and where everything lives.
 func FileLocations() {
 	tui.Clear()

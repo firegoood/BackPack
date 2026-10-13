@@ -48,6 +48,9 @@ const QUICInitialPacketSize = 1232
 // timeout, the keepalive that holds a NAT mapping open, and the datagram socket
 // buffers.
 type QUICSettings struct {
+	// IncomingStreamLimit is optional; zero preserves the manual engine limit.
+	// Enrolled peer endpoints use a small fixed resource budget instead.
+	IncomingStreamLimit int64
 	// DialTimeout bounds name resolution and the initial QUIC handshake as one
 	// attempt. Zero leaves the budget to the caller's context.
 	DialTimeout time.Duration
@@ -65,12 +68,16 @@ type QUICSettings struct {
 }
 
 func (s QUICSettings) quicConfig() *quic.Config {
+	limit := s.IncomingStreamLimit
+	if limit == 0 {
+		limit = 1 << 16
+	}
 	return &quic.Config{
 		KeepAlivePeriod: s.KeepAlivePeriod,
 		MaxIdleTimeout:  s.MaxIdleTimeout,
 		// The pool pre-opens streams and every forwarded flow is one more, so the
 		// ceiling has to be generous or the client blocks opening the next one.
-		MaxIncomingStreams: 1 << 16,
+		MaxIncomingStreams: limit,
 		// Allow the datagram socket to be reused for a graceful restart.
 		Allow0RTT: false,
 		// Start small enough to cross a 1280-byte path; discovery grows it.

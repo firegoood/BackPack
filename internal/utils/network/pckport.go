@@ -165,7 +165,7 @@ func portSpec(lo, hi uint16) string {
 // An empty id is the untagged spelling v1.8.4 and earlier wrote.
 func pckRules(id string, lo, hi uint16) [][]string {
 	p := portSpec(lo, hi)
-	comment := "backpack-pck-" + p
+	comment := "fullpack-pck-" + p
 	if id != "" {
 		comment = pckRulePrefix(id) + p
 	}
@@ -209,19 +209,19 @@ func scopedPckRules(id string, lo, hi uint16, iface, local, peer string, peerPor
 }
 
 // pckRulePrefix is how every rule of one tunnel's comment begins.
-func pckRulePrefix(id string) string { return "backpack-pck-" + id + "-" }
+func pckRulePrefix(id string) string { return "fullpack-pck-" + id + "-" }
 
 // pckRuleIDs finds only the tagged format; untagged legacy ranges have no
 // reliable tunnel owner and are handled separately during PCK initialization.
 func pckRuleIDs(listing string) []string {
 	seen := map[string]bool{}
 	var ids []string
-	for _, del := range tunnelRuleDeletions(listing, "backpack-pck-") {
+	for _, del := range tunnelRuleDeletions(listing, "fullpack-pck-") {
 		for i := 0; i+1 < len(del); i++ {
 			if del[i] != "--comment" {
 				continue
 			}
-			tag := strings.TrimPrefix(del[i+1], "backpack-pck-")
+			tag := strings.TrimPrefix(del[i+1], "fullpack-pck-")
 			parts := strings.SplitN(tag, "-", 2)
 			if len(parts) != 2 || len(parts[0]) != 8 {
 				continue

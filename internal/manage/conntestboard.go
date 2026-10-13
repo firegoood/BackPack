@@ -35,6 +35,12 @@ var ctTransportNames = map[string]string{
 }
 
 func ctName(tr string) string {
+	if tr == "waticmp" {
+		return "Wat ICMP Normal"
+	}
+	if tr == "waticmp-reverse" {
+		return "Wat ICMP Reverse"
+	}
 	if n, ok := ctTransportNames[tr]; ok {
 		return n
 	}

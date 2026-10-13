@@ -75,14 +75,14 @@ auto_mtu = false
 Start the Kharej first, then Iran, using a separate terminal on each host:
 
 ```sh
-sudo timeout --signal=TERM 600 backpack -c /root/bp-check.toml
+sudo timeout --signal=TERM 600 fullpack -c /root/bp-check.toml
 ```
 
 On Iran, `ping -I bpcheck0 -c 300 -i 1 10.233.151.2` checks five minutes of
 delivery. Transfer a random file over the private tunnel address and compare
 SHA-256 at both ends; a successful ping alone does not establish throughput.
 The example forwards no public ports, changes no default route and uses a
-temporary foreground process. On exit, BackPack removes its TUN and its own
+temporary foreground process. On exit, FullPack removes its TUN and its own
 tag-scoped firewall rules. Keep existing tunnel services running.
 
 The fixed 1280-byte MTU is a conservative starting point for this manual IPv4
@@ -108,4 +108,4 @@ TCP/UDP برقرار نشده است؛ نتیجهٔ همهٔ پروتکل‌ها
 
 ---
 
-*Last verified against Backpack v1.9.0.*
+*Last verified against FullPack v1.9.0.*

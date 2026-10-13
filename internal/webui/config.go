@@ -68,7 +68,7 @@ type Config struct {
 	// panel), so nothing starts it again behind their back.
 	//
 	// Every run of the menu used to start the panel on its way in, and stopping
-	// it left no record beyond the missing unit — so the next `sudo backpack`
+	// it left no record beyond the missing unit — so the next `sudo fullpack`
 	// wrote the unit and started it again. Reported against v1.8.4 as "I turn
 	// the web panel off by hand, and every time I run the script it turns it
 	// back on". Only an explicit start (Restart panel) clears it.
@@ -487,7 +487,7 @@ var removeUnit = func() error {
 // panelUnit is the panel's systemd unit.
 func panelUnit() string {
 	return fmt.Sprintf(`[Unit]
-Description=Backpack Web Panel
+Description=FullPack Web Panel
 After=network.target
 
 [Service]

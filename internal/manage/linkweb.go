@@ -18,7 +18,7 @@ type SetupLinkInfo struct {
 	// For is the side the link builds: "kharej" or "iran".
 	For  string `json:"for"`
 	Kind string `json:"kind"` // reverse | direct
-	// Apply and Install are the two commands for a kharej: with Backpack
+	// Apply and Install are the two commands for a kharej: with FullPack
 	// already on it, and without. Empty when the link is for the Iran side,
 	// which is built from its menu.
 	Apply   string `json:"apply,omitempty"`
@@ -36,6 +36,11 @@ type SetupLinkInfo struct {
 func SetupLinkFor(name, host string) (SetupLinkInfo, error) {
 	host = strings.Trim(strings.TrimSpace(host), "[]")
 	if host == "" {
+		if s, err := LoadSpec(name); err == nil && s.NaiveServer.Enabled() {
+			host = managedCertificateHost(s.NaiveServer.Certificate)
+		}
+	}
+	if host == "" {
 		host = linkHost()
 	}
 	raw, err := shareLinkFor(name, host)
@@ -49,14 +54,14 @@ func SetupLinkFor(name, host string) (SetupLinkInfo, error) {
 	info := SetupLinkInfo{Name: name, Link: raw, For: l.PeerSide(), Kind: l.Kind, Host: host,
 		NeedsAddress: host == "" && l.PeerNeedsAddress()}
 	if info.For == "kharej" {
-		info.Apply = "sudo backpack link apply '" + raw + "'"
+		info.Apply = "sudo fullpack link apply '" + raw + "'"
 		info.Install = InstallCommand(raw)
-		info.Where = "sudo backpack → Setup Kharej → Setup Link"
+		info.Where = "sudo fullpack → Setup Kharej → Setup Link"
 		if managedTransport(l.Tr) {
-			info.Where = "sudo backpack → Setup Kharej → Reverse → HTTPS → Same Protocol → Setup Link"
+			info.Where = "sudo fullpack → Setup Kharej → Reverse → HTTPS → Same Protocol → Setup Link"
 		}
 	} else {
-		info.Where = "sudo backpack → Manage → Set Up From A Link"
+		info.Where = "sudo fullpack → Manage → Set Up From A Link"
 	}
 	return info, nil
 }

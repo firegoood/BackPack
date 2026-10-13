@@ -12,10 +12,10 @@ import (
 
 // How the other side is built from a setup link, as the Iran wizard, its
 // summary and Manage → Setup Link all print it: the link itself, for a kharej
-// that already runs Backpack, and one command that installs Backpack and
+// that already runs FullPack, and one command that installs FullPack and
 // applies the link, for a kharej that does not.
 
-// InstallCommand is the one line that installs Backpack on a server and builds
+// InstallCommand is the one line that installs FullPack on a server and builds
 // the tunnel in link there. It is run as root on the kharej; install.sh hands
 // what follows it to the installed binary (see the end of install.sh).
 func InstallCommand(link string) string {
@@ -33,17 +33,17 @@ func InstallCommand(link string) string {
 func printLinkBlock(link, menuPath string) {
 	command := InstallCommand(link)
 	if command == "" {
-		menuPath = "sudo backpack → Setup Kharej → Reverse → HTTPS → Same Protocol → Setup Link"
+		menuPath = "sudo fullpack → Setup Kharej → Reverse → HTTPS → Same Protocol → Setup Link"
 	}
 	fmt.Println()
 	tui.Info("Setup Link (" + menuPath + "):")
 	fmt.Println(tui.Color(tui.Bold+tui.White, link))
 	fmt.Println()
 	if command == "" {
-		tui.Info("Install The Same BackPack Build On Kharej With BP_HELPERS=naive,xray, Then Apply:")
-		fmt.Println(tui.Color(tui.Bold+tui.White, "sudo backpack link apply '"+link+"'"))
+		tui.Info("Install The Same FullPack Build On Kharej With BP_HELPERS=naive,xray, Then Apply:")
+		fmt.Println(tui.Color(tui.Bold+tui.White, "sudo fullpack link apply '"+link+"'"))
 	} else {
-		tui.Info("Install BackPack And Set Up This Tunnel (Kharej Without BackPack, As Root):")
+		tui.Info("Install FullPack And Set Up This Tunnel (Kharej Without FullPack, As Root):")
 		fmt.Println(tui.Color(tui.Bold+tui.White, command))
 	}
 }

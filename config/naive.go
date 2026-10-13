@@ -3,7 +3,7 @@ package config
 // NaiveClientConfig is the optional HTTP/2 wrapper of the existing TCP reverse
 // engine. It does not own pairing, forwarding, metrics or another service.
 type NaiveClientConfig struct {
-	// Binary is the absolute path to the official NaiveProxy client binary; Backpack never downloads or replaces it.
+	// Binary is the absolute path to the official NaiveProxy client binary; FullPack never downloads or replaces it.
 	Binary string `toml:"binary"`
 	// Server is the HTTP/2 proxy's host:port, reached from the outside client toward the Iran server.
 	Server string `toml:"server"`

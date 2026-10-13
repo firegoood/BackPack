@@ -52,8 +52,8 @@ func fakeCgroup(t *testing.T, body string) {
 
 func TestOwnUnitReadsTheCgroup(t *testing.T) {
 	for body, want := range map[string]string{
-		"0::/system.slice/backpack-webui.service\n":                                app.WebUIService,
-		"12:pids:/\n1:name=systemd:/system.slice/backpack-monitor.service\n0::/\n": app.MonitorService,
+		"0::/system.slice/fullpack-webui.service\n":                                app.WebUIService,
+		"12:pids:/\n1:name=systemd:/system.slice/fullpack-monitor.service\n0::/\n": app.MonitorService,
 		"0::/user.slice/user-0.slice/session-3.scope\n":                            "",
 	} {
 		fakeCgroup(t, body)
@@ -140,9 +140,9 @@ func TestAMachineWithoutThePanelIsNotWarnedAboutIt(t *testing.T) {
 			*calls = append(*calls, strings.Join(args, " "))
 			switch args[0] {
 			case "is-enabled", "is-active":
-				return "", errors.New("Unit backpack-webui.service could not be found.")
+				return "", errors.New("Unit fullpack-webui.service could not be found.")
 			case "restart":
-				return "", errors.New("Unit backpack-webui.service not found.")
+				return "", errors.New("Unit fullpack-webui.service not found.")
 			}
 		}
 		return inner(args...)

@@ -20,7 +20,7 @@ func TestConnectionTestAvoidsAnOccupiedKharejPortAcrossARealTUN(t *testing.T) {
 	}
 	bin := os.Getenv("BACKPACK_CURRENT_BINARY")
 	if bin == "" {
-		bin = filepath.Join(t.TempDir(), "backpack")
+		bin = filepath.Join(t.TempDir(), "fullpack")
 		build := exec.Command("go", "build", "-o", bin, "../..")
 		build.Stderr = os.Stderr
 		if err := build.Run(); err != nil {

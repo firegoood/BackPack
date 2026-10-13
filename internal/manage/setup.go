@@ -60,8 +60,12 @@ var transportGroups = []transportGroup{
 	}},
 }
 
-// The terminal collects helper credentials; the web form cannot collect them.
-// Keep these selections out of the ordinary transport API until it can.
+var peerTransportGroup = transportGroup{"ICMP / Auto", "experimental; matching FullPack versions and explicit peer enrollment required", []transportEntry{
+	{"Wat ICMP (WatTunnel Engine)", "native encrypted streams; normal or reverse Echo direction; Linux root/CAP_NET_RAW; distinct from legacy xDi", "waticmp"},
+	{"Auto (intelligent peer-coordinated selection)", "only approved encrypted carriers; stable user ports, authenticated probes and recovery", "auto"},
+}}
+
+// Both terminal and web setup collect role-specific HTTPS credentials.
 func cliTransportGroups() []transportGroup {
 	return append(append([]transportGroup(nil), transportGroups...), transportGroup{
 		"HTTPS", "encrypted reverse TCP — Linux, matching versions on both sides", []transportEntry{
@@ -69,7 +73,7 @@ func cliTransportGroups() []transportGroup {
 			{"XHTTP / TLS", "HTTP/2 streaming — certificate or a private trust file", "xhttp"},
 			{"REALITY / Vision", "TLS cover endpoint — no local certificate required", "reality"},
 		},
-	})
+	}, peerTransportGroup)
 }
 
 func managedTransport(value string) bool {
@@ -77,6 +81,9 @@ func managedTransport(value string) bool {
 }
 
 func selectedTransport(s TunnelSpec) string {
+	if s.Auto.Enabled {
+		return "auto"
+	}
 	if s.NaiveServer.Enabled() || s.NaiveClient.Enabled() {
 		return "naive"
 	}
@@ -115,7 +122,7 @@ func clearManagedTransport(s *TunnelSpec) {
 
 func managedHelperPath(tool string) string {
 	version := map[string]string{"naive": "v154.0.8037.49-4", "sing-box": "v1.14.2", "xray": "v26.3.27"}[tool]
-	return filepath.Join("/usr/local/lib/backpack/helpers", tool, version+"-"+runtime.GOARCH, tool)
+	return filepath.Join("/usr/local/lib/fullpack/helpers", tool, version+"-"+runtime.GOARCH, tool)
 }
 
 func defaultString(value, fallback string) string {
@@ -490,7 +497,7 @@ func applyManualTuning(s *TunnelSpec) {
 // that wants a real certificate is finished in one pass instead of being built
 // and then reconfigured.
 func setupServerTLS(s *TunnelSpec) bool {
-	// Self-signed encrypts exactly as well — the client is Backpack's own code
+	// Self-signed encrypts exactly as well — the client is FullPack's own code
 	// and does not verify it. A real certificate matters for how the
 	// connection looks from outside, and it is what a CDN requires.
 	choice := tui.ChooseOpt("TLS Certificate", []tui.Option{

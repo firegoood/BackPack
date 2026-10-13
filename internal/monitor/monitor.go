@@ -125,7 +125,7 @@ func runJobOnce(logger *logrus.Logger, name string, fn func(context.Context), ct
 // under normal operation.
 func Run() {
 	logger := utils.NewLogger("info")
-	logger.Info("backpack monitor started")
+	logger.Info("fullpack monitor started")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -206,7 +206,7 @@ func Run() {
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
 	<-sig
 
-	logger.Info("backpack monitor stopping")
+	logger.Info("fullpack monitor stopping")
 	// So the time spent closing things is not mistaken for a hang.
 	core.NotifyStopping()
 	cancel()
@@ -237,7 +237,7 @@ func startSocksRelays(ctx context.Context, logger *logrus.Logger) {
 	// it. Binding it on every install — which is what used to happen — squats
 	// the port every other SOCKS proxy expects, so on a machine that also runs
 	// a panel or an xray inbound on 1080, whichever service boots first wins
-	// and the other silently loses its port. Backpack has no business holding
+	// and the other silently loses its port. FullPack has no business holding
 	// 1080 unless one of its own tunnels, written before the port was derived
 	// from the token, is genuinely still using it.
 	if manage.LegacySocksInUse(tunnels) {

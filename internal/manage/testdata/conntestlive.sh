@@ -40,7 +40,11 @@ fi
 
 mkdir -p "$W"
 rm -f "$W/link"
-ip netns exec iran env CT_ROLE=iran CT_HOST=10.99.0.1 CT_W="$W" CT_SOAK="$SOAK" CT_PRESET="${PRESET:-}" CT_ONLY="${ONLY:-}" BIN="$BIN" \
+# Separate /run like separate servers: engines with equal temporary names must
+# not compete for one local control socket just because the fixture shares a FS.
+private_run() { unshare --mount -- bash -c 'mount -t tmpfs none /run; exec "$@"' _ "$@"; }
+export -f private_run
+ip netns exec iran bash -c 'private_run "$@"' _ env CT_ROLE=iran CT_HOST=10.99.0.1 CT_W="$W" CT_SOAK="$SOAK" CT_PRESET="${PRESET:-}" CT_ONLY="${ONLY:-}" CT_WAT_PEER="${CT_WAT_PEER:-}" BIN="$BIN" \
   "$TESTBIN" -test.run '^TestConnTestIranSide$' -test.v -test.timeout 10m > "$W/iran.out" 2>&1 &
 IP=$!
 for i in $(seq 60); do [ -s "$W/link" ] && break; sleep 1; done
@@ -57,7 +61,7 @@ if [ -n "${HOLD_DIRECT_PORT:-}" ]; then
   fi
 fi
 
-ip netns exec kharej "$BIN" link apply "$(cat "$W/link")" > "$W/kharej.out" 2>&1
+ip netns exec kharej bash -c 'private_run "$@"' _ "$BIN" link apply "$(cat "$W/link")" > "$W/kharej.out" 2>&1
 KC=$?
 if [ -n "$HP" ]; then kill "$HP" 2>/dev/null; wait "$HP" 2>/dev/null; fi
 wait $IP

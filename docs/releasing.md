@@ -27,8 +27,8 @@ written down, so a release made in a hurry is the same release.
       user namespaces (CI does not), with the previous release at one end:
       ```
       git worktree add --detach /tmp/prev <previous tag>
-      (cd /tmp/prev && go build -o /tmp/backpack-prev .)
-      BP_L3_LIVE=1 BACKPACK_PREV_BINARY=/tmp/backpack-prev \
+      (cd /tmp/prev && go build -o /tmp/fullpack-prev .)
+      BP_L3_LIVE=1 BACKPACK_PREV_BINARY=/tmp/fullpack-prev \
         go test ./internal/e2e -run TestL3CarriersOverARealTUN -count=1 -v
       ```
       Every carrier, a listener killed and restarted, a lossy path, and udp,
@@ -96,7 +96,7 @@ project's history and the one nothing else records.
 To check a binary you downloaded against it:
 
 ```
-go version -m ./backpack
+go version -m ./fullpack
 ```
 
 ## If the signing key is lost or leaked
@@ -151,4 +151,4 @@ during the incident.
 
 ---
 
-*Last verified against Backpack v1.9.0.*
+*Last verified against FullPack v1.9.0.*

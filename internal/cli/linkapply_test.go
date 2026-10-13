@@ -8,7 +8,7 @@ import (
 	"github.com/backpack/backpack/internal/manage"
 )
 
-// `backpack link apply` is what the one-line install runs on a kharej, so what
+// `fullpack link apply` is what the one-line install runs on a kharej, so what
 // it takes and what it says is the whole of that experience.
 func TestLinkApplyTakesTheLinkAndSaysWhetherItConnected(t *testing.T) {
 	prevApply, prevAwait, prevRoot := applyLink, awaitLink, isRoot
@@ -19,7 +19,7 @@ func TestLinkApplyTakesTheLinkAndSaysWhetherItConnected(t *testing.T) {
 	var gotOpts manage.LinkApplyOptions
 	applyLink = func(raw string, o manage.LinkApplyOptions) (manage.LinkApplied, error) {
 		gotLink, gotOpts = raw, o
-		return manage.LinkApplied{Name: "client-443", Service: "backpack-client-443.service", Kind: "reverse",
+		return manage.LinkApplied{Name: "client-443", Service: "fullpack-client-443.service", Kind: "reverse",
 			Transport: "tcp", Dials: "203.0.113.7:443", Backups: []string{"iran.example.com:443"},
 			Active: true, RestartHours: 6, RestartMinute: 17}, nil
 	}
@@ -66,6 +66,6 @@ func TestLinkApplyRefusesWhatItCannotDo(t *testing.T) {
 		}
 	}
 	if !IsCommand("link") {
-		t.Error("main would not route `backpack link` here")
+		t.Error("main would not route `fullpack link` here")
 	}
 }

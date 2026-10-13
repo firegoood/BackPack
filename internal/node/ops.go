@@ -259,7 +259,7 @@ func LocalInfo() Info {
 		Uptime:   sysstat.HumanDuration(m.Uptime),
 
 		// Sampled over a real window rather than taken from the snapshot. This
-		// runs inside `backpack node exec`, which starts, answers and exits, so
+		// runs inside `fullpack node exec`, which starts, answers and exits, so
 		// the snapshot's instantaneous reading has no earlier sample to
 		// subtract and comes back as 0 or 100 almost at random. See
 		// sysstat.CPUPercentOver.

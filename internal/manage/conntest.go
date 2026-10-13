@@ -34,6 +34,7 @@ import (
 	"github.com/backpack/backpack/config"
 	"github.com/backpack/backpack/internal/spooftest"
 	"github.com/backpack/backpack/internal/tunnel/naive"
+	"github.com/backpack/backpack/internal/tunnel/probe"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/proxy"
 )
@@ -56,7 +57,7 @@ import (
 // tunnel — an echo a second for a minute, and a bulk transfer at the end — and
 // reports which carried it all, which dropped, and which never came up. Both
 // sides print the table, and nothing is left behind: no unit, no config under
-// /etc/backpack, no rule once the engines have stopped.
+// /etc/fullpack, no rule once the engines have stopped.
 //
 // The Iran side is the judge because it is where users arrive: every tunnel,
 // reverse or direct, is used from there. The kharej hears the verdict through
@@ -72,7 +73,7 @@ const connTestKind = "test"
 // the direct ones when the operator names a source to forge (see
 // ConnTestOptions.SpoofSrc); pck, on either side, needs root on both servers.
 var (
-	connTestReverse = []string{"tcp", "tcpmux", "stealth", "pck", "ws", "wss", "wsmux", "wssmux", "kcp", "quic", "udp", "naive", "xhttp", "reality"}
+	connTestReverse = []string{"tcp", "tcpmux", "stealth", "pck", "ws", "wss", "wsmux", "wssmux", "kcp", "quic", "udp", "naive", "xhttp", "reality", "waticmp", "waticmp-reverse"}
 	connTestDirect  = []string{"udp", "quic", "pck", "xdi", "sni"}
 )
 
@@ -186,7 +187,7 @@ type connTestAddr struct {
 func parseConnTestLink(s string) (connTestAddr, error) {
 	s = FindSetupLink(s)
 	if !strings.HasPrefix(s, connTestScheme) {
-		return connTestAddr{}, fmt.Errorf("that is not a Backpack connection-test link — it begins with %s", connTestScheme)
+		return connTestAddr{}, fmt.Errorf("that is not a FullPack connection-test link — it begins with %s", connTestScheme)
 	}
 	b, err := base64.RawURLEncoding.DecodeString(strings.TrimPrefix(s, connTestScheme))
 	if err != nil || len(b) <= connTestFixedLen || b[0] != connTestLinkVer {
@@ -358,6 +359,9 @@ type ConnTestOptions struct {
 	// RealityTarget is an explicit reachable TLS 1.3/H2 hostname:port used
 	// for the REALITY cover handshake. Empty selects a verified endpoint automatically.
 	RealityTarget string
+	// WatPeerIPv4 explicitly enrolls native normal/reverse ICMP tests. Empty
+	// leaves both rows SKIPPED; raw socket privileges are checked independently.
+	WatPeerIPv4 string
 	// Direct includes the direct tunnels. They need root on both servers.
 	Direct bool
 	// Preset is balance, turbo or aggressive; empty is turbo, the wizards'
@@ -391,7 +395,7 @@ func StartConnTestIran(o ConnTestOptions) (*ConnTestIran, string, error) {
 	if host == "" {
 		return nil, "", fmt.Errorf("this server's address is needed: it is what the kharej dials")
 	}
-	dir, err := os.MkdirTemp("", "backpack-conntest-")
+	dir, err := os.MkdirTemp("", "fullpack-conntest-")
 	if err != nil {
 		return nil, "", err
 	}
@@ -435,6 +439,11 @@ func StartConnTestIran(o ConnTestOptions) (*ConnTestIran, string, error) {
 			return fail(err)
 		}
 		c := &connTestCase{kind: "reverse", tr: tr, name: "ct-" + id + "-" + tr, udp: tr == "udp"}
+		if ctWatCase(tr) {
+			s.startWatCase(c, used, o)
+			s.cases = append(s.cases, c)
+			continue
+		}
 		if managedTransport(tr) {
 			s.startManagedCase(c, used, o)
 			s.cases = append(s.cases, c)
@@ -1356,29 +1365,7 @@ func connectWaitFor(c *connTestCase) time.Duration {
 
 // ctEcho sends a small random payload and requires it back unchanged.
 func ctEcho(c net.Conn, udp bool) error {
-	msg := make([]byte, 512)
-	_, _ = rand.Read(msg)
-	_ = c.SetDeadline(time.Now().Add(4 * time.Second))
-	defer c.SetDeadline(time.Time{})
-	if n, err := c.Write(msg); err != nil {
-		return err
-	} else if n != len(msg) {
-		return io.ErrShortWrite
-	}
-	got := make([]byte, len(msg))
-	if udp {
-		n, err := c.Read(got)
-		if err != nil {
-			return err
-		}
-		got = got[:n]
-	} else if _, err := io.ReadFull(c, got); err != nil {
-		return err
-	}
-	if !bytes.Equal(got, msg) {
-		return errors.New("the echo came back different")
-	}
-	return nil
+	return probe.Echo(c, udp)
 }
 
 // ctBulk exercises the legacy echo transfer for compatibility checks.
@@ -1955,7 +1942,7 @@ func RunConnTestKharej(ctx context.Context, raw string, out io.Writer, live func
 	defer cancel()
 	root := os.Geteuid() == 0
 
-	dir, err := os.MkdirTemp("", "backpack-conntest-")
+	dir, err := os.MkdirTemp("", "fullpack-conntest-")
 	if err != nil {
 		return nil, ConnTestBest{}, err
 	}
@@ -1985,7 +1972,9 @@ func RunConnTestKharej(ctx context.Context, raw string, out io.Writer, live func
 			}
 			var spec TunnelSpec
 			var err error
-			if managedTransport(c.Tr) {
+			if ctWatCase(c.Tr) {
+				spec, err = ctWatClient(ctx, link, c)
+			} else if managedTransport(c.Tr) {
 				spec, err = ctManagedClient(ctx, link, c, dir)
 			} else {
 				spec, err = kharejFromLink(c, LinkApplyOptions{Host: link.Host})

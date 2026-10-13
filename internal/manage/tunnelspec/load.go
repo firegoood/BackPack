@@ -22,9 +22,10 @@ func LoadServer(name string) (Spec, error) {
 		return Spec{}, fmt.Errorf("%q is not a server tunnel", name)
 	}
 	return Spec{
-		Role:               "server",
-		Name:               name,
-		Transport:          string(sc.Transport),
+		Role:      "server",
+		Name:      name,
+		Transport: string(sc.Transport),
+		WatICMP:   sc.WatICMP, Auto: cfg.Auto,
 		NaiveServer:        sc.Naive,
 		XrayServer:         sc.Xray,
 		BindAddr:           sc.BindAddr,
@@ -89,9 +90,10 @@ func loadClient(name string) (Spec, error) {
 		return Spec{}, fmt.Errorf("%q is not a client tunnel", name)
 	}
 	return Spec{
-		Role:               "client",
-		Name:               name,
-		Transport:          string(cc.Transport),
+		Role:      "client",
+		Name:      name,
+		Transport: string(cc.Transport),
+		WatICMP:   cc.WatICMP, Auto: cfg.Auto,
 		NaiveClient:        cc.Naive,
 		XrayClient:         cc.Xray,
 		RemoteAddr:         cc.RemoteAddr,

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 280" role="img" aria-labelledby="title description">
+  <title id="title">FullPack</title>
+  <desc id="description">FullPack tunnel engine</desc>
+  <rect width="1200" height="280" rx="24" fill="#0b0b0b"/>
+  <text x="600" y="156" text-anchor="middle" font-family="Arial, sans-serif" font-size="92" font-weight="700" fill="#fafafa">Full<tspan fill="#ef4444">Pack</tspan></text>
+  <text x="600" y="211" text-anchor="middle" font-family="Arial, sans-serif" font-size="23" fill="#a3a3a3">Tunnel engine · Built in Go</text>
+</svg>

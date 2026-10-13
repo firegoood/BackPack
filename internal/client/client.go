@@ -12,6 +12,7 @@ import (
 	"github.com/backpack/backpack/internal/debugserver"
 	"github.com/backpack/backpack/internal/tunnel/chain"
 	"github.com/backpack/backpack/internal/tunnel/naive"
+	"github.com/backpack/backpack/internal/tunnel/waticmp"
 	"github.com/backpack/backpack/internal/utils/handlers"
 	"github.com/backpack/backpack/internal/utils/network"
 	"github.com/backpack/backpack/internal/web"
@@ -193,6 +194,17 @@ func (c *Client) startTransport(ctx context.Context, tr config.TransportType, en
 		endpoints.SetReachProbe(nil)
 	}
 	switch tr {
+	case config.WATICMP:
+		r := transport.NewWatClient(ctx, &transport.WatConfig{
+			Wat: waticmp.SettingsOf(c.config.WatICMP, c.config.Token), RemoteAddr: c.config.RemoteAddr,
+			Endpoints: endpoints, Token: c.config.Token, ConnPoolSize: c.config.ConnectionPool,
+			KeepAlive: time.Duration(c.config.Keepalive) * time.Second, RetryInterval: time.Duration(c.config.RetryInterval) * time.Second,
+			DialTimeOut: time.Duration(c.config.DialTimeout) * time.Second, WebPort: c.config.WebPort,
+			Sniffer: c.config.Sniffer, SnifferLog: c.config.SnifferLog, AggressivePool: c.config.AggressivePool,
+			SO_RCVBUF: c.config.SO_RCVBUF, SO_SNDBUF: c.config.SO_SNDBUF,
+		}, c.logger)
+		go r.Start()
+		return r
 	case config.TCP, config.STEALTH:
 		tcpConfig := &transport.TcpConfig{
 			RemoteAddr:     c.config.RemoteAddr,

@@ -1,7 +1,7 @@
 // Package cli is the non-interactive face of the same operations the menu
 // offers.
 //
-// Everything BackPack does from a terminal has until now gone through
+// Everything FullPack does from a terminal has until now gone through
 // internal/menu: 1,400 lines that read stdin and write stdout directly. That
 // shape has two costs and they are the same cost seen from two sides. Nothing
 // can drive it, so nothing tests it — it is the largest package in the tree
@@ -39,7 +39,9 @@ import (
 	"github.com/backpack/backpack/internal/tunhist"
 
 	"github.com/backpack/backpack/internal/app"
+	"github.com/backpack/backpack/internal/enginectl"
 	"github.com/backpack/backpack/internal/manage"
+	"github.com/backpack/backpack/internal/tunnel/peerauto"
 )
 
 // Result is everything a command produced: what to print, what to print on
@@ -70,19 +72,23 @@ const (
 	CodeFailed    = 1
 )
 
-const usage = `backpack — non-interactive commands
+const usage = `fullpack — non-interactive commands
 
-  backpack tunnel list [--json]         every tunnel and its state
-  backpack tunnel status <name> [--json]  one tunnel: state, peer, and what it has carried
-  backpack check -c <file>              validate a config without starting it
-  backpack link apply [--name N] [--host IP] '<setup link>'
+  fullpack tunnel list [--json]         every tunnel and its state
+  fullpack tunnel status <name> [--json]  one tunnel: state, peer, and what it has carried
+  fullpack check -c <file>              validate a config without starting it
+  fullpack auto status <name> [--json]  live peer decision, scores and history
+  fullpack auto <test-now|switch|lock|disable-carrier> <name> <candidate>
+  fullpack auto <unlock|observe|resume> <name>
+  fullpack link apply [--name N] [--host IP] '<setup link>'
                                         build and start the tunnel a setup link describes
-  backpack proxy enable <socks5|http> <port> [--user U --pass P]
-  backpack proxy disable | status [--json]
+  fullpack proxy enable <socks5|http> <port> [--user U --pass P]
+  fullpack proxy disable | status [--json]
                                         the built-in proxy a tunnel's port forwards to
-  backpack version [--json]
+  fullpack version [--json]
+  fullpack licenses [--json]           native Wat source attribution and MIT text
 
-Run backpack with no arguments for the interactive menu.
+Run fullpack with no arguments for the interactive menu.
 Exit codes: 0 ok, 1 failed, 2 usage, 3 not found, 4 unhealthy.
 `
 
@@ -110,10 +116,60 @@ func Run(args []string) Result {
 		return runProxy(args[1:])
 	case "version":
 		return runVersion(args[1:])
+	case "auto":
+		return runAuto(args[1:])
+	case "licenses":
+		return runLicenses(args[1:])
 	case "help", "-h", "--help":
 		return ok(usage)
 	}
 	return fail(CodeUsage, "unknown command %q\n\n%s", args[0], usage)
+}
+
+func runAuto(args []string) Result {
+	asJSON, args := takeJSONFlag(args)
+	if len(args) < 2 || len(args) > 3 {
+		return fail(CodeUsage, "auto needs an operation, tunnel name and optional enrolled candidate\n")
+	}
+	name := args[1]
+	if name == "" || strings.ContainsAny(name, "/\\") || name == "." || name == ".." {
+		return fail(CodeUsage, "invalid tunnel name\n")
+	}
+	if args[0] == "status" {
+		if len(args) != 2 {
+			return fail(CodeUsage, "auto status takes one tunnel name\n")
+		}
+		var s peerauto.Status
+		if e := enginectl.Ask(name, enginectl.OpAutoStatus, &s); e != nil {
+			return fail(CodeFailed, "%v\n", e)
+		}
+		if asJSON {
+			b, _ := json.MarshalIndent(s, "", "  ")
+			return ok(string(b) + "\n")
+		}
+		b, _ := json.MarshalIndent(s, "", "  ")
+		return ok(string(b) + "\n")
+	}
+	a := peerauto.Action{Operation: args[0]}
+	if len(args) == 3 {
+		a.Candidate = args[2]
+	}
+	switch a.Operation {
+	case "test-now", "switch", "lock", "disable-carrier":
+		if a.Candidate == "" {
+			return fail(CodeUsage, "operation requires an enrolled candidate\n")
+		}
+	case "unlock", "observe", "resume":
+		if a.Candidate != "" {
+			return fail(CodeUsage, "operation takes no candidate\n")
+		}
+	default:
+		return fail(CodeUsage, "unknown Auto operation\n")
+	}
+	if e := enginectl.AskBody(name, enginectl.OpAutoAction, a, nil); e != nil {
+		return fail(CodeFailed, "%v\n", e)
+	}
+	return ok("Auto operation completed; inspect auto status for the committed generation.\n")
 }
 
 func runTunnel(args []string) Result {
@@ -316,7 +372,7 @@ func tunnelStatus(name string, asJSON bool) Result {
 		}
 		r = ok(b.String())
 	}
-	// The exit code carries the answer as well as the output, so `backpack
+	// The exit code carries the answer as well as the output, so `fullpack
 	// tunnel status x >/dev/null || alert` is a whole monitoring integration.
 	if v.State != "online" {
 		r.Code = CodeUnhealthy
@@ -325,7 +381,7 @@ func tunnelStatus(name string, asJSON bool) Result {
 }
 
 // EngineCheck is the engine's own load-time validation of a config file —
-// the checks that decide whether `backpack -c` starts, machine-dependent ones
+// the checks that decide whether `fullpack -c` starts, machine-dependent ones
 // included. It lives in package cmd, which this package cannot import, so
 // main installs it; nil leaves check to its static checks alone.
 var EngineCheck func(path string) error
@@ -356,13 +412,13 @@ func runCheck(args []string) Result {
 			continue
 		}
 		if path == "" {
-			path = rest[i] // `backpack check file.toml` as well as `-c file.toml`
+			path = rest[i] // `fullpack check file.toml` as well as `-c file.toml`
 			continue
 		}
 		return fail(CodeUsage, "check takes one config file\n")
 	}
 	if path == "" {
-		return fail(CodeUsage, "check needs a config file: backpack check -c /etc/backpack/x.toml\n")
+		return fail(CodeUsage, "check needs a config file: fullpack check -c /etc/fullpack/x.toml\n")
 	}
 
 	problems := manage.ValidateConfigFile(path)
@@ -449,7 +505,7 @@ func takeJSONFlag(args []string) (bool, []string) {
 // drifting — a command added below is routable immediately.
 func IsCommand(s string) bool {
 	switch s {
-	case "tunnel", "check", "version", "link", "proxy":
+	case "tunnel", "auto", "check", "version", "licenses", "link", "proxy":
 		return true
 	}
 	return false
@@ -487,9 +543,9 @@ var (
 // linkAwait is how long `link apply` waits to see the tunnel reach the far end.
 var linkAwait = 25 * time.Second
 
-// runLink is `backpack link apply`: the kharej end of a tunnel from the setup
+// runLink is `fullpack link apply`: the kharej end of a tunnel from the setup
 // link the Iran server printed, with nothing asked. It is also what the
-// one-line install runs once Backpack is on the machine.
+// one-line install runs once FullPack is on the machine.
 func runLink(args []string) Result {
 	if len(args) == 0 || args[0] != "apply" {
 		return fail(CodeUsage, "link needs a subcommand: apply\n\n%s", usage)
@@ -522,7 +578,7 @@ func runLink(args []string) Result {
 		}
 	}
 	if strings.TrimSpace(link) == "" {
-		return fail(CodeUsage, "link apply needs the setup link: backpack link apply 'backpack://…'\n")
+		return fail(CodeUsage, "link apply needs the setup link: fullpack link apply 'backpack://…'\n")
 	}
 	if manage.IsConnTestLink(link) {
 		// A Connection Test link from the Iran server: nothing is installed,
@@ -579,7 +635,7 @@ func linkReport(done manage.LinkApplied) Result {
 	ok := paint("32;1", "✓")
 	row := func(k, v string) { say("    %s %s\n", paint("2", fmt.Sprintf("%-9s", k)), v) }
 
-	say("\n  %s\n%s", paint("1", "Backpack · setup link"), rule)
+	say("\n  %s\n%s", paint("1", "FullPack · setup link"), rule)
 	verb := "created"
 	if done.Updated {
 		verb = "updated to match the Iran side"
@@ -616,7 +672,7 @@ func linkReport(done manage.LinkApplied) Result {
 	} else {
 		say("  %s Not connected yet (%s). It keeps trying on its own; if it stays down, check that the "+
 			"Iran server's tunnel port is open and that both ends are on the same version: "+
-			"backpack tunnel status %s\n%s", paint("33;1", "!"), strings.TrimSpace(detail), done.Name, rule)
+			"fullpack tunnel status %s\n%s", paint("33;1", "!"), strings.TrimSpace(detail), done.Name, rule)
 		return Result{Out: b.String(), Code: CodeUnhealthy}
 	}
 }

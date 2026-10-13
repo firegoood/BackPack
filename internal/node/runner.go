@@ -68,9 +68,9 @@ func (e ErrOffline) Error() string {
 func (e ErrOffline) Unwrap() error { return e.Err }
 
 // ErrNeedsInstall means the far server cannot answer this panel because the
-// Backpack on it is missing or too old. Both are fixed the same way, by
+// FullPack on it is missing or too old. Both are fixed the same way, by
 // installing over the same SSH connection, so both carry this.
-var ErrNeedsInstall = errors.New("backpack must be installed on that server")
+var ErrNeedsInstall = errors.New("fullpack must be installed on that server")
 
 // SSHRunner drives managed servers over SSH.
 type SSHRunner struct {
@@ -184,7 +184,7 @@ func (r *SSHRunner) exec(ctx context.Context, name string, t SSHTarget, req Requ
 
 	line := strings.TrimSpace(string(stdout))
 	if line == "" {
-		return Response{}, fmt.Errorf("%s answered nothing — is Backpack installed there?", name)
+		return Response{}, fmt.Errorf("%s answered nothing — is FullPack installed there?", name)
 	}
 	dec, err := base64.StdEncoding.DecodeString(lastLine(line))
 	if err != nil {
@@ -211,16 +211,16 @@ func lastLine(s string) string {
 // the operator has to do about it, which is the same thing in both of the ways
 // it happens.
 //
-// A server that has never had Backpack fails in the shell: "command not found".
-// A server that has an older Backpack fails inside the binary — it runs, does
+// A server that has never had FullPack fails in the shell: "command not found".
+// A server that has an older FullPack fails inside the binary — it runs, does
 // not recognise `node exec`, and prints its own usage. The second is not an
 // exotic case: it is the state of every server in a fleet on the day the panel
 // is upgraded, and it used to be reported as a hard failure, with the far
 // machine's help text for commands this version no longer has rendered straight
-// into the add form. It told the operator to go and run `backpack node setup`,
+// into the add form. It told the operator to go and run `fullpack node setup`,
 // which is exactly the flow that was removed.
 //
-// Both mean the same thing to the panel — the Backpack over there is not one
+// Both mean the same thing to the panel — the FullPack over there is not one
 // this panel can talk to — and both are answered the same way, by installing,
 // which is also how a server is upgraded. So both are named the same, and the
 // add handler's install path covers both.
@@ -228,9 +228,9 @@ func backpackMissing(err error) error {
 	msg := err.Error()
 	switch {
 	case strings.Contains(msg, "not found"), strings.Contains(msg, "No such file"):
-		return errNotInstalled("Backpack is not installed on that server")
+		return errNotInstalled("FullPack is not installed on that server")
 	case outdatedBackpack(msg):
-		return errNotInstalled("the Backpack on that server is too old to be managed " +
+		return errNotInstalled("the FullPack on that server is too old to be managed " +
 			"from this panel")
 	}
 	return err
@@ -252,7 +252,7 @@ func errNotInstalled(what string) error {
 // It is matched on the shape of the answer rather than on a version, because
 // the panel has no version to read: asking for one is itself a command the old
 // binary would reject. What every version before this one has in common is that
-// an unknown subcommand is refused by name, and that the whole of `backpack
+// an unknown subcommand is refused by name, and that the whole of `fullpack
 // node`'s help follows it.
 func outdatedBackpack(msg string) bool {
 	if strings.Contains(msg, `unknown command "exec"`) {
@@ -260,8 +260,8 @@ func outdatedBackpack(msg string) bool {
 	}
 	// Older still, or built differently: the usage arrives without the line
 	// above it. Two markers rather than one, so an unrelated message that
-	// happens to contain the word "backpack" is not read as this.
-	return strings.Contains(msg, "backpack node") &&
+	// happens to contain the word "fullpack" is not read as this.
+	return strings.Contains(msg, "fullpack node") &&
 		(strings.Contains(msg, "node setup") || strings.Contains(msg, "--setup-key"))
 }
 
@@ -319,7 +319,7 @@ func mustJSON(v any) json.RawMessage {
 	return b
 }
 
-// Install puts Backpack on a server that does not have it, over the same SSH.
+// Install puts FullPack on a server that does not have it, over the same SSH.
 //
 // This is what makes adding a server one action. The channel it replaces asked
 // the operator to paste a line on the far machine, which meant leaving the
@@ -340,7 +340,7 @@ func (r *SSHRunner) Install(name string) (string, error) {
 	}
 	out, err := runLong(c, installCommand(installerURL()))
 	if err != nil {
-		return string(out), fmt.Errorf("installing Backpack on %s failed: %w", name, err)
+		return string(out), fmt.Errorf("installing FullPack on %s failed: %w", name, err)
 	}
 	return string(out), nil
 }
@@ -362,7 +362,7 @@ func (r *SSHRunner) clientFor(name string) (*ssh.Client, error) {
 	return c, nil
 }
 
-// Upgrade reinstalls Backpack on a server, which is how a node is brought to
+// Upgrade reinstalls FullPack on a server, which is how a node is brought to
 // the release the panel is on. It is the same script; the installer replaces
 // the binary and restarts what was running.
 //
@@ -378,7 +378,7 @@ func (r *SSHRunner) Upgrade(name string) (string, error) {
 	}
 	out, err := runLong(c, upgradeCommand(installerURL(), app.BinPath))
 	if err != nil {
-		return string(out), fmt.Errorf("upgrading Backpack on %s failed: %w", name, err)
+		return string(out), fmt.Errorf("upgrading FullPack on %s failed: %w", name, err)
 	}
 	return string(out), nil
 }

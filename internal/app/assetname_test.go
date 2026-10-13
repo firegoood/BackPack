@@ -12,7 +12,7 @@ import (
 // runtime.GOARCH is "arm" for every 32-bit ARM build, whichever variant it was
 // compiled for, and the three are not interchangeable: a v7 binary on a v5
 // board is an illegal instruction, not a slow one. So the releases name them
-// apart, and a running binary that asked for "backpack_linux_arm.tar.gz" would
+// apart, and a running binary that asked for "fullpack_linux_arm.tar.gz" would
 // be asking for something no release publishes — the update would 404 on every
 // ARM machine there is.
 func TestAnARMBuildAsksForItsOwnVariant(t *testing.T) {
@@ -41,7 +41,7 @@ func TestAnARMBuildAsksForItsOwnVariant(t *testing.T) {
 	if got := AssetArch(); got != runtime.GOARCH {
 		t.Errorf("a %s build with a stray GOARM gave %q", runtime.GOARCH, got)
 	}
-	if !strings.HasPrefix(AssetName(), "backpack_linux_"+runtime.GOARCH) {
+	if !strings.HasPrefix(AssetName(), "fullpack_linux_"+runtime.GOARCH) {
 		t.Errorf("AssetName = %q", AssetName())
 	}
 }
@@ -68,10 +68,10 @@ func TestEveryArchitectureBuiltIsAlsoPublished(t *testing.T) {
 	// for an asset that does not exist.
 	if !strings.Contains(src, "github.com/backpack/backpack/internal/app.GOARM=$$v") {
 		t.Error("the ARM builds are not stamped with their variant, so each would " +
-			"ask for backpack_linux_arm.tar.gz, which no release publishes")
+			"ask for fullpack_linux_arm.tar.gz, which no release publishes")
 	}
 	// Both loops name the archive the same way the binary will.
-	if !strings.Contains(src, "release/backpack_linux_$$a.tar.gz") {
+	if !strings.Contains(src, "release/fullpack_linux_$$a.tar.gz") {
 		t.Error("the archives are not named after the architectures that were built")
 	}
 }
@@ -109,7 +109,7 @@ func TestTheWorkflowPublishesEverythingTheBuildProduces(t *testing.T) {
 		t.Skipf("no workflow here: %v", err)
 	}
 	src := string(wf)
-	if !strings.Contains(src, "release/backpack_linux_*.tar.gz") {
+	if !strings.Contains(src, "release/fullpack_linux_*.tar.gz") {
 		t.Error("the workflow names its assets one by one, so an architecture added " +
 			"to the build is published only if somebody remembers to add it here too")
 	}

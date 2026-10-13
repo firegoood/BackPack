@@ -1,4 +1,4 @@
-// Package menu implements the interactive backpack CLI shown when the binary
+// Package menu implements the interactive fullpack CLI shown when the binary
 // is run without a config file.
 package menu
 
@@ -177,7 +177,7 @@ func refreshLabel() string {
 
 func requireRoot() {
 	if os.Geteuid() != 0 {
-		tui.Error("Run as root: sudo backpack")
+		tui.Error("Run as root: sudo fullpack")
 		os.Exit(1)
 	}
 }

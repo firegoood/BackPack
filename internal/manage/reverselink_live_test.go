@@ -30,14 +30,14 @@ import (
 // it, its link is made as the wizard makes it, the kharej is built from that
 // link both ways a kharej can be — the wizard's Setup Link answer and Manage →
 // Set up from a link (the panel's paste box and a managed far end use the same
-// form) — and the path `backpack link apply` and the one-line install take —
+// form) — and the path `fullpack link apply` and the one-line install take —
 // and then both ends run as the real binary, with the defaults and the
 // checks a real start applies, and bytes have to cross.
 func TestAKharejMadeFromTheSetupLinkCarriesTraffic(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds and runs the engine; skipped under -short")
 	}
-	bin := filepath.Join(t.TempDir(), "backpack")
+	bin := filepath.Join(t.TempDir(), "fullpack")
 	build := exec.Command("go", "build", "-o", bin, "../..")
 	build.Stderr = os.Stderr
 	if err := build.Run(); err != nil {
@@ -365,7 +365,7 @@ func TestAKharejFromALinkFailsOverToTheLinksBackupAddress(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds and runs the engine; skipped under -short")
 	}
-	bin := filepath.Join(t.TempDir(), "backpack")
+	bin := filepath.Join(t.TempDir(), "fullpack")
 	build := exec.Command("go", "build", "-o", bin, "../..")
 	build.Stderr = os.Stderr
 	if err := build.Run(); err != nil {

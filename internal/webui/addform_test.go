@@ -103,6 +103,7 @@ var chosenInJS = map[string]bool{
 // them is the point.
 var fromTheOtherSide = map[string]bool{
 	"fecData": true, "fecParity": true, "mtu": true, "mssClamp": true, "autoMtu": true,
+	"managed.caPem": true, // public CA trust comes from the peer link, not a local path
 }
 
 func TestTheSetupFormMatchesWhatTheServerAccepts(t *testing.T) {
@@ -120,6 +121,7 @@ func TestTheSetupFormMatchesWhatTheServerAccepts(t *testing.T) {
 		{"conn.", manage.ConnTune{}},
 		{"limits.", manage.TunnelLimits{}},
 		{"spoof.", manage.SpoofTune{}},
+		{"managed.", manage.ManagedHTTPS{}},
 	} {
 		for k, v := range jsonTags(s.prefix, s.v) {
 			accepts[k] = v
@@ -191,6 +193,7 @@ func TestTheEditFormMatchesWhatTheServerAccepts(t *testing.T) {
 		{"conn.", manage.ConnTune{}},
 		{"limits.", manage.TunnelLimits{}},
 		{"spoof.", manage.SpoofTune{}},
+		{"managed.", manage.ManagedHTTPS{}},
 	} {
 		for k, v := range jsonTags(s.prefix, s.v) {
 			accepts[k] = v

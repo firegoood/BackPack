@@ -29,7 +29,7 @@ func lockPckTunnel(id string) (*os.File, error) {
 	if err := unix.Stat("/proc/self/ns/net", &ns); err != nil {
 		return nil, err
 	}
-	const dir = "/run/backpack-pck"
+	const dir = "/run/fullpack-pck"
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func CleanupPckGuards(tokens ...string) {
 
 // otherPckProcess covers pre-ownership binaries. A config alone is insufficient:
 // it may have changed while the old engine still owns packet sockets. If such
-// a Backpack process cannot be identified reliably, cleanup is withheld.
+// a FullPack process cannot be identified reliably, cleanup is withheld.
 func otherPckProcess(id string) bool {
 	packet, err := os.ReadFile("/proc/net/packet")
 	if err != nil {
@@ -169,7 +169,7 @@ func otherPckProcess(id string) bool {
 			// Updated engines keep the immutable tunnel ID in their lock's
 			// filename even when the on-disk config has changed. Older engines
 			// have no such evidence, so their packet sockets block cleanup.
-			if id != "" && strings.HasPrefix(target, "/run/backpack-pck/") && strings.HasSuffix(target, ".lock") {
+			if id != "" && strings.HasPrefix(target, "/run/fullpack-pck/") && strings.HasSuffix(target, ".lock") {
 				if strings.HasSuffix(target, "-"+id+".lock") {
 					return true
 				}
@@ -188,7 +188,7 @@ func otherPckProcess(id string) bool {
 func pckExecutable(root string) bool {
 	path := root + "/exe"
 	exe, _ := os.Readlink(path)
-	if strings.Contains(filepath.Base(exe), "backpack") {
+	if strings.Contains(filepath.Base(exe), "fullpack") {
 		return true
 	}
 	info, err := buildinfo.ReadFile(path)

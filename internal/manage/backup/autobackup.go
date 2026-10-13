@@ -49,7 +49,7 @@ func SetAutoBackup(on bool) error {
 // there is none. Names are timestamped so lexical order is chronological, but
 // the file's own mtime is what actually answers "how old".
 func newestBackupTime() time.Time {
-	matches, _ := filepath.Glob(filepath.Join(app.BackupDir, "backpack-backup-*.tar.gz"))
+	matches, _ := filepath.Glob(filepath.Join(app.BackupDir, "fullpack-backup-*.tar.gz"))
 	if len(matches) == 0 {
 		return time.Time{}
 	}

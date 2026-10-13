@@ -285,6 +285,12 @@ func TestAConnectionTestOverLoopbackPassesEveryReverseTransport(t *testing.T) {
 		t.Fatalf("%d results for %d transports", len(results), len(connTestReverse))
 	}
 	for _, r := range results {
+		// This fixture has no explicit raw peer IPs. Native rows must report
+		// that limitation; the separate two-namespace fixture enables both rows.
+		if r.Status == ctSkipped && (r.Transport == "waticmp" || r.Transport == "waticmp-reverse") && strings.Contains(r.Detail, "explicit Iran and Kharej IPv4") {
+			t.Logf("%s skipped without explicit raw endpoints: %s", r.Transport, r.Detail)
+			continue
+		}
 		if r.Status == ctSkipped && managedTransport(r.Transport) && os.Getenv("BP_CONNTEST_HELPERS") != "1" {
 			t.Logf("%s skipped: %s", r.Transport, r.Detail)
 			continue

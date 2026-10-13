@@ -185,7 +185,7 @@ func serverJSON(c *config.ServerConfig) ([]byte, error) {
 	n := c.Naive
 	// sing-box watches certificate/key paths itself and accepts matched but
 	// expired replacements. Freeze the validated material for this generation
-	// so only BackPack's certificate watcher can replace it.
+	// so only FullPack's certificate watcher can replace it.
 	certificate, key, err := validatedTLSMaterial(n.Certificate, n.Key, "", "Naive")
 	if err != nil {
 		return nil, err

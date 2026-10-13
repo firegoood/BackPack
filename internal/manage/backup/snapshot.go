@@ -47,7 +47,7 @@ func TakeSnapshot(reason string) (Snapshot, error) {
 
 	// 1) The binary currently installed.
 	if core.FileExists(app.BinPath) {
-		if err := copyFile(app.BinPath, filepath.Join(dir, "backpack"), 0755); err != nil {
+		if err := copyFile(app.BinPath, filepath.Join(dir, "fullpack"), 0755); err != nil {
 			os.RemoveAll(dir)
 			return Snapshot{}, fmt.Errorf("could not snapshot the binary: %w", err)
 		}
@@ -129,7 +129,7 @@ func RestoreSnapshot(s Snapshot, logf func(string)) error {
 	}
 
 	// 1) Binary.
-	if bin := filepath.Join(s.Dir, "backpack"); core.FileExists(bin) {
+	if bin := filepath.Join(s.Dir, "fullpack"); core.FileExists(bin) {
 		logf("Restoring the previous binary...")
 		tmp := app.BinPath + ".rollback"
 		if err := copyFile(bin, tmp, 0755); err != nil {

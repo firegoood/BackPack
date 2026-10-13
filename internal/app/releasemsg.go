@@ -4,7 +4,7 @@ package app
 // then its checksum list.
 //
 // It covered the checksum list alone, and the list names archives, not a
-// version — backpack_linux_amd64.tar.gz is the same name in every release. So a
+// version — fullpack_linux_amd64.tar.gz is the same name in every release. So a
 // mirror, or a proxy on the path, could serve an older release's archive,
 // checksums and signature under a newer tag, every one of them genuine, and an
 // updater would verify it and install it: a downgrade to whatever the older

@@ -50,7 +50,7 @@ their cards and their logs from this side.
 
 ## Which way the connection goes
 
-The panel dials out. The far server opens nothing for Backpack, and the panel
+The panel dials out. The far server opens nothing for FullPack, and the panel
 opens nothing for the fleet — there is no listener on either side beyond the
 sshd that was already there.
 
@@ -77,7 +77,7 @@ now rather than a server that sits in the fleet doing nothing. A server that
 does not answer is not saved: an entry that has never worked is not a server, it
 is a typo.
 
-If Backpack is not installed there, the panel installs it — that is the ordinary
+If FullPack is not installed there, the panel installs it — that is the ordinary
 case for a server you have just bought, not a failure. It fetches the same
 installer you would run by hand, from the same place, so the archive and its
 checksum still arrive from one origin.
@@ -102,8 +102,8 @@ pin, but not touch a login (see [access control](access-control.md)).
 
 ### Where the password is kept
 
-In `/etc/backpack/nodes.json`, on the panel's own server, `0600` and owned by
-root — the same file and the same permissions as every other secret Backpack
+In `/etc/fullpack/nodes.json`, on the panel's own server, `0600` and owned by
+root — the same file and the same permissions as every other secret FullPack
 holds. It is never sent to the browser.
 
 ## Building a tunnel on both ends
@@ -198,11 +198,11 @@ the two were a pair.
 
 ## On the managed server
 
-Nothing. There is no Backpack service, no config and no state that belongs to
+Nothing. There is no FullPack service, no config and no state that belongs to
 being managed: the panel logs in, runs one command, and logs out. Removing the
 server from the fleet leaves nothing behind to clean up.
 
-The one command is `backpack node exec -`, which reads one request from stdin
+The one command is `fullpack node exec -`, which reads one request from stdin
 and performs a single operation from a fixed list — create or update a tunnel,
 start, stop, restart, report, read a log — and refuses anything else. It is not
 meant to be typed. The request comes on stdin rather than as an argument
@@ -253,7 +253,7 @@ as before, until it is upgraded.
 «offline». SSH همین حالا آنجا در حال اجراست، همین حالا احراز هویت دارد و همین
 حالا راهِ ادارهٔ آن ماشین است.
 
-**جهت اتصال:** پنل زنگ می‌زند. سرور دور چیزی برای Backpack باز نمی‌کند و پنل هم
+**جهت اتصال:** پنل زنگ می‌زند. سرور دور چیزی برای FullPack باز نمی‌کند و پنل هم
 چیزی برای ناوگان باز نمی‌کند. یعنی سروری که پشت NAT است و راه ورودی ندارد
 مدیریت نمی‌شود — که طرح قبلی اجازه می‌داد — ولی در عوض پنلی که هیچ آدرس عمومی
 ندارد می‌تواند سرورها را مدیریت کند، که قبلاً نمی‌توانست.
@@ -263,8 +263,8 @@ as before, until it is upgraded.
 می‌گویی. اگر عوض شود پنل وصل نمی‌شود و می‌گوید؛ یا سرور از نو ساخته شده یا چیز
 دیگری جایش جواب می‌دهد. عوض‌کردن آدرس سرور کلید را هم پاک می‌کند.
 
-**رمز کجاست:** در `/etc/backpack/nodes.json` روی سرور خود پنل، با مجوز `0600` و
-مالکیت root — همان فایل و همان مجوزی که هر راز دیگر Backpack دارد. هیچ‌وقت به
+**رمز کجاست:** در `/etc/fullpack/nodes.json` روی سرور خود پنل، با مجوز `0600` و
+مالکیت root — همان فایل و همان مجوزی که هر راز دیگر FullPack دارد. هیچ‌وقت به
 مرورگر فرستاده نمی‌شود.
 
 **ساختن تونل روی هر دو سر:** وقتی جفت را از پنل می‌سازی، **هر دو** سر نوشته
@@ -294,4 +294,4 @@ as before, until it is upgraded.
 
 ---
 
-*Last verified against Backpack v1.9.0.*
+*Last verified against FullPack v1.9.0.*

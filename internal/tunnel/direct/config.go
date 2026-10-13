@@ -56,7 +56,7 @@ const (
 	// has no certificate at all until the limit resets. It is the same
 	// directory the reverse transports use, so a host running both does not
 	// hold two accounts.
-	defaultACMECacheDir = "/etc/backpack/acme"
+	defaultACMECacheDir = "/etc/fullpack/acme"
 )
 
 // Config is one resolved direct tunnel.

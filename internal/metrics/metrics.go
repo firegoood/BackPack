@@ -57,7 +57,8 @@ type Snapshot struct {
 	// Runtime is what the process is holding: goroutines, descriptors and heap.
 	// A pointer so a snapshot written by an older binary through an upgrade is
 	// distinguishable from one reporting zero of everything.
-	Runtime *RuntimeStats `json:"runtime,omitempty"`
+	Runtime         *RuntimeStats   `json:"runtime,omitempty"`
+	TransportDetail json.RawMessage `json:"transport_detail,omitempty"`
 
 	// KCP-only. Zero on every other transport.
 	KCP *KCPStats `json:"kcp,omitempty"`
@@ -334,11 +335,12 @@ func (c *Collector) Snapshot() Snapshot {
 		s.Pool = &PoolStats{Live: live, Target: target, Configured: configured, Mbps: mbps}
 	}
 	s.LocalService = localService.Load()
+	s.TransportDetail = diagnosticSnapshot()
 	// What this process is holding. See runtime.go for why these are here and
 	// not left to a profiler nobody attaches to a production tunnel.
 	rs := readRuntimeStats()
 	s.Runtime = &rs
-	if c.transport == "kcp" {
+	if c.transport == "kcp" || c.transport == "xdi" || c.transport == "pck" {
 		// kcp-go keeps these counters process-wide. A tunnel runs as its own
 		// process, so they describe exactly this tunnel.
 		snmp := kcp.DefaultSnmp.Copy()

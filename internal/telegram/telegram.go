@@ -24,7 +24,7 @@ import (
 	"github.com/backpack/backpack/internal/sysstat"
 )
 
-const cronMarker = "backpack-telegram"
+const cronMarker = "fullpack-telegram"
 
 // Config is the persisted Telegram bot configuration.
 type Config struct {
@@ -332,7 +332,7 @@ func bar(pct float64) string {
 // list, written once.
 func helpText(lang string) string {
 	var out strings.Builder
-	out.WriteString(b("🎒 Backpack") + " " + esc(app.Version) + "\n\n")
+	out.WriteString(b("🎒 FullPack") + " " + esc(app.Version) + "\n\n")
 	for _, e := range commandList() {
 		fmt.Fprintf(&out, "/%s — %s\n", e.name, esc(tr(lang, e.desc)))
 	}
@@ -389,7 +389,7 @@ func webPanelInfo() (password, url string) {
 }
 
 // SendStatusNow sends the current status to the configured admin. Called by
-// the `backpack --telegram-report` cron job.
+// the `fullpack --telegram-report` cron job.
 func SendStatusNow() error {
 	c := Load()
 	if c.Token == "" || c.AdminID == "" {
@@ -417,7 +417,7 @@ func SendStatusNow() error {
 // first attempt as a failure is how a working setup looks broken right after it
 // is configured.
 func SendTest(c Config) error {
-	const msg = "✅ Backpack is connected. You will receive status reports here."
+	const msg = "✅ FullPack is connected. You will receive status reports here."
 
 	// Only a relayed send has the restart-then-reconnect race; a direct send
 	// that fails is failing for a real reason and should say so at once.
@@ -771,7 +771,7 @@ func sendBackup(c Config) error {
 		return fmt.Errorf("could not build the backup: %w", err)
 	}
 
-	name := fmt.Sprintf("backpack-backup-%s.tar.gz", time.Now().Format("2006-01-02-1504"))
+	name := fmt.Sprintf("fullpack-backup-%s.tar.gz", time.Now().Format("2006-01-02-1504"))
 	caption := "🔐 Full backup — every tunnel and token, the panel password, " +
 		"Telegram settings and certificates.\n\nKeep it private: anyone with this " +
 		"file can connect to your tunnels."

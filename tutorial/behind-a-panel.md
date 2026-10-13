@@ -1,6 +1,6 @@
 # Behind a panel (X-UI / 3x-ui / Marzban)
 
-The most common Backpack deployment: a VPN panel on the kharej server, users
+The most common FullPack deployment: a VPN panel on the kharej server, users
 connecting to the Iran IP. This page covers the four things that are specific to
 that setup.
 
@@ -97,11 +97,11 @@ public forwarded port.
 # on kharej — the inbound is listening where you mapped it
 ss -tlnp | grep 2096
 
-# on Iran — Backpack holds the exposed port
+# on Iran — FullPack holds the exposed port
 ss -tlnp | grep :443
 ss -lnup  | grep :443        # only if UDP forwarding is on
 
-sudo backpack → Manage → Health Check
+sudo fullpack → Manage → Health Check
 ```
 
 Then add the **Iran IP** and the exposed port to the client config — users never
@@ -129,7 +129,7 @@ inbound مبتنی بر QUIC) از `Manage → Edit → Forward UDP` روشنش 
 
 **۳. آی‌پی واقعی کاربر.** بدون آن پنل همهٔ کاربران را یک دستگاه می‌بیند و
 محدودیت تعداد کاربر کار نمی‌کند. **اول** در پنل گزینهٔ «Accept Proxy Protocol»
-را روشن کن، **بعد** در بک‌پک `Manage → Edit → Real client IP`. برعکسش همهٔ
+را روشن کن، **بعد** در FullPack `Manage → Edit → Real client IP`. برعکسش همهٔ
 اتصال‌ها را خراب می‌کند.
 
 **۴. پورت پنل ادمین را تونل نکن** — فقط پورت‌های inbound را در معرض بگذار.

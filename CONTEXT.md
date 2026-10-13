@@ -1,4 +1,4 @@
-# Backpack — domain language
+# FullPack — domain language
 
 The words this codebase uses for its own concepts, each with the one meaning it
 has here. Code, comments, docs and reviews use them in this sense; where two

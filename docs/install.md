@@ -1,31 +1,36 @@
-# Installing Backpack
+# Installing FullPack
 
 ## The normal way
 
 One command as root on the VPS:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/AminMGMT/BackPack/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/firegoood/BackPack/main/install.sh)
 ```
 
 It downloads the prebuilt release archive for your architecture (amd64/arm64)
-into `/root/BackPack`, **verifies it against the checksum published with the
+into `/root/FullPack`, **verifies it against the checksum published with the
 release**, installs the binary, and opens the menu when it finishes.
 
 Reopen the menu any time with:
 
 ```bash
-sudo backpack
+sudo fullpack
 ```
 
-Everything lands in a tidy layout — the release bundle in `/root/BackPack`,
-backups in `/root/BackPack/backups`, tunnel configs in `/etc/backpack`. See
+Everything lands in a tidy layout — the release bundle in `/root/FullPack`,
+backups in `/root/FullPack/backups`, tunnel configs in `/etc/fullpack`. See
 [server layout](server-layout.md).
 
 > **Building from source** still works as a fallback: clone the repo and run
 > `sudo bash install.sh` inside it. If the release download fails it builds with
 > Go, fetching modules **directly first** and via Iran-friendly mirrors
 > (RunFlare, goproxy.cn) only when direct access fails.
+
+Source builds need Go 1.26.9 or a patched later branch. On the Go 1.27 branch,
+use 1.27.2 or newer: the installer refuses 1.27.0/1.27.1, which lack the security
+fixes already present in the 1.26.9 baseline. The same requirement applies when
+building manually. See the [official Go release history](https://go.dev/doc/devel/release).
 
 ---
 
@@ -36,9 +41,9 @@ install it there. Nothing is fetched from the VPS.
 
 ![Offline install](../img/offline-install.gif)
 
-From the [releases page](https://github.com/AminMGMT/BackPack/releases/latest),
+From the [releases page](https://github.com/firegoood/BackPack/releases/latest),
 download the archive for the server's architecture — run `uname -m` on it:
-`x86_64` → `backpack_linux_amd64.tar.gz`, `aarch64` → `backpack_linux_arm64.tar.gz`.
+`x86_64` → `fullpack_linux_amd64.tar.gz`, `aarch64` → `fullpack_linux_arm64.tar.gz`.
 
 ### With the installer (recommended)
 
@@ -48,7 +53,7 @@ VPS, and run it. It finds the local archive, verifies it against `SHA256SUMS`,
 and never touches the network:
 
 ```bash
-scp install.sh SHA256SUMS backpack_linux_amd64.tar.gz root@SERVER_IP:/root/
+scp install.sh SHA256SUMS fullpack_linux_amd64.tar.gz root@SERVER_IP:/root/
 ssh root@SERVER_IP "cd /root && sudo bash install.sh"
 ```
 
@@ -57,12 +62,12 @@ ssh root@SERVER_IP "cd /root && sudo bash install.sh"
 Upload the archive to the server, then as root:
 
 ```bash
-sha256sum backpack_linux_amd64.tar.gz        # compare against SHA256SUMS
-tar xzf backpack_linux_amd64.tar.gz
-mkdir -p /etc/backpack /root/BackPack/backups
-install -m 0755 backpack /usr/local/bin/backpack
-echo /root/BackPack > /etc/backpack/install_path
-sudo backpack
+sha256sum fullpack_linux_amd64.tar.gz        # compare against SHA256SUMS
+tar xzf fullpack_linux_amd64.tar.gz
+mkdir -p /etc/fullpack /root/FullPack/backups
+install -m 0755 fullpack /usr/local/bin/fullpack
+echo /root/FullPack > /etc/fullpack/install_path
+sudo fullpack
 ```
 
 The `install_path` line is what the built-in uninstaller reads to know what to
@@ -72,8 +77,8 @@ hand. `install -m 0755` already sets the executable bit, so no `chmod` is needed
 ### Updating offline
 
 The same way: repeat the steps with the newer archive. `install` replaces the
-binary in place, and your tunnels in `/etc/backpack` are untouched. Restart them
-afterwards with `sudo backpack` → **Manage → Restart ALL**.
+binary in place, and your tunnels in `/etc/fullpack` are untouched. Restart them
+afterwards with `sudo fullpack` → **Manage → Restart ALL**.
 
 ---
 
@@ -86,7 +91,7 @@ installed. [More](updates.md).
 
 ## Uninstalling
 
-**Main menu → 9) Uninstall** removes everything Backpack installed.
+**Main menu → 9) Uninstall** removes everything FullPack installed.
 
 ---
 
@@ -96,7 +101,7 @@ installed. [More](updates.md).
 
 **نصب عادی:** یک دستور با کاربر root روی سرور — آرشیو ریلیز مخصوص معماری سرور را
 دانلود می‌کند، با چک‌سام منتشرشده **تأیید** می‌کند، نصب می‌کند و خودش منو را باز
-می‌کند. بعداً با `sudo backpack` منو را باز کن.
+می‌کند. بعداً با `sudo fullpack` منو را باز کن.
 
 **نصب آفلاین (سروری که به گیت‌هاب دسترسی ندارد):** فایل ریلیز را روی یک ماشین با
 اینترنت دانلود کن و به سرور کپی کن. با `uname -m` معماری را ببین: `x86_64` یعنی
@@ -108,7 +113,7 @@ amd64 و `aarch64` یعنی arm64. بهترین راه این است که `insta
 
 **آپدیت:** از منوی اصلی گزینهٔ ۸ — با تأیید SHA-256 و **بازگشت خودکار** اگر تونل
 بالا نیامد. آپدیت آفلاین هم همان مراحل نصب با آرشیو جدید است و کانفیگ‌های
-`/etc/backpack` دست‌نخورده می‌مانند.
+`/etc/fullpack` دست‌نخورده می‌مانند.
 
 </div>
 
@@ -117,4 +122,4 @@ amd64 و `aarch64` یعنی arm64. بهترین راه این است که `insta
 
 ---
 
-*Last verified against Backpack v1.9.0.*
+*Last verified against FullPack v1.9.0.*

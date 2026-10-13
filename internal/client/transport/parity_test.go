@@ -31,7 +31,7 @@ import (
 // engineFile maps an engine to the file that implements it. Several transports
 // share one engine: stealth is tcp with a Noise layer under it, wss is ws with
 // TLS, and xdi, spoof and pck are all KCP over a different carrier.
-var clientEngines = []string{"tcp", "tcpmux", "ws", "wsmux", "udp", "kcp", "quic"}
+var clientEngines = []string{"tcp", "tcpmux", "ws", "wsmux", "udp", "kcp", "quic", "waticmp"}
 
 func readEngine(t *testing.T, side, name string) string {
 	t.Helper()
@@ -77,6 +77,8 @@ func TestEveryClientEngineIsCovered(t *testing.T) {
 		switch name {
 		case "mux": // NewMuxClient is the tcpmux engine
 			name = "tcpmux"
+		case "wat":
+			name = "waticmp"
 		case "spoofpipe": // the WireGuard relay, not a tunnel transport
 			continue
 		}

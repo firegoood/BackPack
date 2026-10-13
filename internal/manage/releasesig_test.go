@@ -21,7 +21,7 @@ func TestASignatureOverTheChecksumsIsCheckedAgainstThePinnedKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sums := []byte("abc123  backpack_linux_amd64.tar.gz\n")
+	sums := []byte("abc123  fullpack_linux_amd64.tar.gz\n")
 
 	// The publisher's signature verifies.
 	sig := ed25519.Sign(priv, sums)

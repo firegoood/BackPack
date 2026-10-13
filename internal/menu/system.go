@@ -60,7 +60,7 @@ func optimizeMenu() {
 // uninstallMenu is main-menu item 9.
 func uninstallMenu() {
 	tui.Clear()
-	tui.Title("Uninstall Backpack")
+	tui.Title("Uninstall FullPack")
 	fmt.Println()
 	tui.Warn("Removes Everything: Tunnels, Configs, The Binary And " + app.InstallDir + " (Backups Too).")
 	if !tui.Confirm("Are You Sure", false) {
@@ -74,12 +74,23 @@ func uninstallMenu() {
 	}
 
 	for _, t := range manage.List() {
-		_ = manage.Delete(t.Name)
+		if err := manage.Delete(t.Name); err != nil {
+			tui.Warn("Could Not Stop And Remove " + t.Name + ": " + err.Error())
+			tui.Warn("Configuration And Fencing State Were Kept. Resolve This Error Before Uninstalling.")
+			tui.PressEnter()
+			return
+		}
 	}
 	_ = webui.Disable()
 	_ = manage.DisableMonitorService()
 	_ = schedule.SetAutoRefresh(0)
 	_ = telegram.Disable()
+	if err := manage.RemoveInstalledHelpers(); err != nil {
+		tui.Warn("Could Not Remove Installed Helpers: " + err.Error())
+		tui.Warn("Remaining Installation Files Were Kept. Resolve This Before Uninstalling.")
+		tui.PressEnter()
+		return
+	}
 	os.RemoveAll(app.ConfigDir)
 	if err := os.Remove(app.BinPath); err != nil {
 		tui.Warn("Could Not Remove " + app.BinPath + " — Remove It By Hand.")

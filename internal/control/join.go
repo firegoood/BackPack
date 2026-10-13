@@ -13,7 +13,7 @@ import (
 // This was three hundred lines into an HTTP handler, mixed with form parsing
 // and with ten other actions, and it is the one of them that is not a
 // pass-through: it reaches the machine while the operator is still looking at
-// the form, installs Backpack when the machine has none, and takes the entry
+// the form, installs FullPack when the machine has none, and takes the entry
 // back out when it cannot be reached at all.
 //
 // None of that is about HTTP. It was reachable only through a POST, so a CLI
@@ -32,7 +32,7 @@ import (
 // Joining is what happened when a server was added.
 type Joining struct {
 	Info node.Info
-	// Installed is whether Backpack was put on the machine as part of joining.
+	// Installed is whether FullPack was put on the machine as part of joining.
 	// The ordinary case for a server somebody has just bought, and worth
 	// reporting: it is the difference between "added" and "added and set up".
 	Installed bool
@@ -52,7 +52,7 @@ func (e JoinError) Unwrap() error { return e.Err }
 // Join adds a server to the fleet and proves it is reachable, removing it again
 // if it is not.
 //
-// install decides what to do with a machine that answers but has no Backpack on
+// install decides what to do with a machine that answers but has no FullPack on
 // it: true installs it, which is the panel's own default because sending the
 // operator to a terminal on that machine is the thing managing it was meant to
 // avoid.
@@ -85,7 +85,7 @@ func (f *Fleet) Join(name, host string, sshPort int, user, password string, inst
 	var out Joining
 	err := run.Call(name, node.OpHello, nil, &out.Info)
 
-	// A machine that answers SSH and has no Backpack on it is the ordinary
+	// A machine that answers SSH and has no FullPack on it is the ordinary
 	// case, not a failure: it is a server the operator has just bought.
 	if errors.Is(err, node.ErrNeedsInstall) && install {
 		inst, ok := run.(interface{ Install(string) (string, error) })
